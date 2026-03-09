@@ -19,7 +19,12 @@
         </div>
         <div class="flex items-center gap-3">
             <a href="/login" data-discover="true">
-                <button class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none h-9 px-4 py-2 text-sm hover:bg-accent hover:text-accent-foreground">
+                <button class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium transition-all
+             disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0
+             outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]
+             aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive
+             h-9 px-4 py-2 has-[>svg]:px-3 text-sm
+             hover:bg-[rgb(255,230,230)] hover:text-accent-foreground dark:hover:bg-[rgb(255,230,230)]">
                     Sign in
                 </button>
             </a>
@@ -217,19 +222,21 @@
     </div>
 </section>
 
-<footer class="bg-gray-50">
-    <div class="max-w-6xl mx-auto px-6 py-12">
-        <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2">
-                <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background-color: rgb(140, 16, 7);">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-book-open w-5 h-5 text-white">
-                        <path d="M12 7v14"></path>
-                        <path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"></path>
-                    </svg>
-                </div>
-                <span class="font-bold text-gray-900">StudyOptimizer</span>
-            </div>
-            <p class="text-sm text-gray-600">Made with ❤️ for students everywhere</p>
+<footer class="border-t border-gray-100 bg-gradient-to-b from-white to-gray-50">
+  <div class="max-w-6xl mx-auto px-6 py-12">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background-color: rgb(140, 16, 7);">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+               class="lucide lucide-book-open w-5 h-5 text-white">
+            <path d="M12 7v14"></path>
+            <path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"></path>
+          </svg>
         </div>
+        <span class="font-bold text-gray-900">StudyOptimizer</span>
+      </div>
+      <p class="text-sm text-gray-600">Made with ❤️ for students everywhere</p>
     </div>
+  </div>
 </footer>

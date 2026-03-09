@@ -1,15 +1,120 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Register - StudyOptimizer</title>
-    <link rel="stylesheet" href="styles.css"> 
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register - StudyOptimizer</title>
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-white text-gray-900">
-    <div class="max-w-md mx-auto mt-20 p-8 border rounded-lg shadow-lg">
-        <h1 class="text-2xl font-bold mb-4">Register</h1>
-        <p class="mb-4">This is a sample registration for StudyOptimizer.</p>
-        <a href="/" class="text-red-700 hover:underline">Go back home</a>
+
+<body class="min-h-screen bg-white flex items-center justify-center px-4">
+
+  <div class="w-full max-w-md">
+
+    <div class="text-center mb-8">
+      <a class="inline-flex items-center gap-2 mb-6" href="/">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          class="lucide lucide-book-open w-6 h-6"
+          style="color: rgb(140, 16, 7);">
+          <path d="M12 7v14"></path>
+          <path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"></path>
+        </svg>
+        <span class="text-xl font-semibold text-gray-900">
+          StudyOptimizer
+        </span>
+      </a>
+
+      <h1 class="text-2xl font-bold text-gray-900 mb-2">
+        Create your account
+      </h1>
+
+      <p class="text-gray-600">
+        Start optimizing your studies today
+      </p>
     </div>
+
+    <form class="space-y-4">
+      <div>
+      <label 
+            data-slot="label" 
+            class="flex items-center gap-2 text-sm leading-none font-medium select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50" 
+            for="name">Full Name
+        </label>
+        <input
+          type="text"
+          id="name"
+          placeholder="John Doe"
+          required
+          class="mt-1 block w-full rounded-md px-3 py-2
+                bg-[rgb(255,230,230)] text-gray-900 placeholder-[rgb(140,16,7)]
+                border border-[rgb(255,230,230)]
+                focus:outline-none focus:border-[rgb(140,16,7)] focus:ring-4 focus:ring-[rgb(140,16,7)]/30"
+        >
+      </div>
+
+      <div>
+        <label 
+            data-slot="label" 
+            class="flex items-center gap-2 text-sm leading-none font-medium select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50" 
+            for="email">Email
+        </label>
+
+        <input
+          type="email"
+          id="email"
+          placeholder="you@example.com"
+          required
+          class="mt-1 block w-full rounded-md px-3 py-2
+                bg-[rgb(255,230,230)] text-gray-900 placeholder-[rgb(140,16,7)]
+                border border-[rgb(255,230,230)]
+                focus:outline-none focus:border-[rgb(140,16,7)] focus:ring-4 focus:ring-[rgb(140,16,7)]/30"
+        >
+      </div>
+
+      <div>
+        <label 
+            data-slot="label" 
+            class="flex items-center gap-2 text-sm leading-none font-medium select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50" 
+            for="password">Password
+        </label>
+        <input
+          type="password"
+          id="password"
+          placeholder="••••••••"
+          required
+          class="mt-1 block w-full rounded-md px-3 py-2
+                bg-[rgb(255,230,230)] text-gray-900 placeholder-[rgb(140,16,7)]
+                border border-[rgb(255,230,230)]
+                focus:outline-none focus:border-[rgb(140,16,7)] focus:ring-4 focus:ring-[rgb(140,16,7)]/30"
+        >
+      </div>
+
+      <button
+        type="submit"
+        class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all
+               bg-[rgb(110,12,5)] text-white hover:bg-[rgb(140,16,7)] h-9 px-4 py-2 w-full">
+        Create account
+      </button>
+
+    </form>
+
+    <div class="mt-6 text-center text-sm text-gray-600">
+      Already have an account?
+      <a href="/login" class="font-bold hover:underline" style="color: rgb(140, 16, 7);">
+        Sign in
+      </a>
+    </div>
+
+  </div>
+
 </body>
 </html>
