@@ -1,0 +1,28 @@
+{% extends 'dashboard/base.html' %}
+
+{% block content %}
+<div class="max-w-md mx-auto">
+    <div class="bg-white rounded-2xl shadow-2xl overflow-hidden">
+        <div class="p-6 border-b border-gray-200 flex items-center justify-between">
+            <h2 class="text-xl font-bold text-gray-900">🔔 Alerts</h2>
+            <a href="{% url 'dashboard' %}" class="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-500">✕</a>
+        </div>
+        <div class="p-6 space-y-3">
+            {% for alert in alerts %}
+            <div class="p-4 rounded-xl border-2
+                {% if alert.type == 'danger' %}bg-red-50 border-red-200
+                {% elif alert.type == 'warning' %}bg-yellow-50 border-yellow-200
+                {% else %}bg-green-50 border-green-200{% endif %}">
+                <div class="flex items-start gap-3">
+                    <span class="text-2xl">{{ alert.emoji }}</span>
+                    <div>
+                        <div class="font-bold text-sm">{{ alert.title }}</div>
+                        <div class="text-xs mt-1 text-gray-600">{{ alert.message }}</div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,271 @@
+{% extends 'dashboard/base.html' %}
+
+{% block content %}
+
+<!-- Welcome Header -->
+<div class="mb-8">
+    <h1 class="text-4xl font-bold text-gray-900">Good morning, {{ user_name }}! 👋</h1>
+    <p class="text-gray-600 mt-1">Here's your study overview for today, {{ today }}</p>
+    <div class="flex gap-3 mt-4">
+        <a href="{% url 'schedule' %}" class="px-4 py-2 border-2 border-gray-200 rounded-lg text-sm font-semibold hover:border-red-300 transition-all">
+            📅 Schedule
+        </a>
+    </div>
+</div>
+
+<!-- Stats Cards -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+    {% for stat in stats %}
+    <div class="bg-white border-2 border-gray-100 hover:border-red-200 rounded-2xl p-6 shadow hover:-translate-y-1 transition-all cursor-pointer">
+        <div class="flex items-center justify-between mb-4">
+            <span class="text-sm font-semibold text-gray-600">{{ stat.label }}</span>
+            <span class="text-3xl">{{ stat.emoji }}</span>
+        </div>
+        <div class="text-3xl font-bold text-gray-900 mb-2">{{ stat.value }}</div>
+        <div class="text-xs font-semibold {{ stat.color_class }}">↑ {{ stat.change }}</div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Main Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+
+    <!-- Left Column (2/3) -->
+    <div class="lg:col-span-2 space-y-6">
+
+        <!-- Quick Actions -->
+        <div class="bg-white border-2 border-gray-100 rounded-2xl shadow-xl overflow-hidden">
+            <div class="bg-gradient-to-r from-red-600 to-orange-500 text-white p-5">
+                <h2 class="text-lg font-bold">⚡ Quick Actions</h2>
+            </div>
+            <div class="p-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+                <a href="#" class="p-6 border-2 border-gray-100 rounded-2xl hover:border-red-300 hover:shadow-lg hover:-translate-y-1 transition-all block">
+                    <div class="text-4xl mb-3">📄</div>
+                    <div class="font-bold text-gray-900">Upload & Summarize</div>
+                    <div class="text-xs text-gray-600 mt-1">AI-powered summaries →</div>
+                </a>
+                <a href="#" class="p-6 border-2 border-gray-100 rounded-2xl hover:border-orange-300 hover:shadow-lg hover:-translate-y-1 transition-all block">
+                    <div class="text-4xl mb-3">✅</div>
+                    <div class="font-bold text-gray-900">Manage Tasks</div>
+                    <div class="text-xs text-gray-600 mt-1">Stay organized →</div>
+                </a>
+                <a href="#" class="p-6 border-2 border-gray-100 rounded-2xl hover:border-purple-300 hover:shadow-lg hover:-translate-y-1 transition-all block">
+                    <div class="text-4xl mb-3">📊</div>
+                    <div class="font-bold text-gray-900">Track Progress</div>
+                    <div class="text-xs text-gray-600 mt-1">See your growth →</div>
+                </a>
+            </div>
+        </div>
+
+        <!-- ✅ Study Hours Chart (NEW) -->
+        <div class="bg-white border-2 border-gray-100 rounded-2xl shadow-xl overflow-hidden">
+            <div class="bg-gradient-to-r from-blue-50 to-cyan-50 border-b-2 border-gray-100 p-5">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-lg font-bold text-gray-900">📊 This Week's Study Hours</h2>
+                    <span class="px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-full text-xs font-bold shadow-lg">
+                        +8h from last week! 🎉
+                    </span>
+                </div>
+            </div>
+            <div class="p-6">
+                <canvas id="studyChart" height="120"></canvas>
+                <div class="grid grid-cols-2 gap-3 mt-4">
+                    <div class="p-3 bg-red-50 border-2 border-red-100 rounded-xl">
+                        <div class="text-xs text-gray-600 mb-1">Total This Week</div>
+                        <div class="text-2xl font-bold text-red-800">42h</div>
+                    </div>
+                    <div class="p-3 bg-blue-50 border-2 border-blue-100 rounded-xl">
+                        <div class="text-xs text-gray-600 mb-1">Daily Average</div>
+                        <div class="text-2xl font-bold text-blue-600">6h</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Academic Period Progress -->
+        <div class="bg-white border-2 border-gray-100 rounded-2xl shadow-xl overflow-hidden">
+            <div class="bg-gradient-to-r from-purple-50 to-pink-50 border-b-2 border-gray-100 p-5">
+                <h2 class="text-lg font-bold text-gray-900">🎯 Academic Period Progress</h2>
+            </div>
+            <div class="p-6 space-y-4">
+                {% for period in period_data %}
+                <div class="p-4 border-2 border-gray-100 rounded-xl hover:border-red-200 transition-all">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-3">
+                            <span class="text-3xl">{{ period.icon }}</span>
+                            <div>
+                                <div class="font-bold text-gray-900">{{ period.name }}</div>
+                                <div class="text-xs text-gray-600">Tasks: {{ period.tasks }}</div>
+                            </div>
+                        </div>
+                        <div class="text-2xl font-bold text-red-800">{{ period.value }}%</div>
+                    </div>
+                    <div class="bg-gray-200 rounded-full h-3 overflow-hidden">
+                        <div class="h-full rounded-full bg-red-800"
+                             id="bar-{{ forloop.counter }}"
+                             data-width="{{ period.value }}">
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Right Sidebar (1/3) -->
+    <div class="space-y-6">
+
+        <!-- Achievements -->
+        <div class="bg-gradient-to-br from-yellow-50 to-orange-50 border-2 border-yellow-200 rounded-2xl shadow-xl overflow-hidden">
+            <div class="bg-gradient-to-r from-yellow-100 to-orange-100 border-b-2 border-yellow-200 p-5">
+                <h2 class="text-lg font-bold text-gray-900">🏆 Achievements</h2>
+            </div>
+            <div class="p-4 space-y-3">
+                {% for achievement in achievements %}
+                <div class="p-3 rounded-xl border-2 {% if achievement.unlocked %}bg-white border-yellow-300 shadow-md{% else %}bg-gray-50 border-gray-200{% endif %}">
+                    <div class="flex items-center gap-3 mb-2">
+                        <span class="text-2xl {% if not achievement.unlocked %}opacity-50{% endif %}">{{ achievement.emoji }}</span>
+                        <div class="flex-1">
+                            <div class="font-bold text-sm text-gray-900">{{ achievement.title }}</div>
+                            {% if achievement.unlocked %}
+                            <div class="text-xs font-bold text-yellow-600">Unlocked! ✨</div>
+                            {% else %}
+                            <div class="text-xs text-gray-600">{{ achievement.progress }} percent complete</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% if not achievement.unlocked %}
+                    <div class="bg-gray-200 rounded-full h-3 overflow-hidden">
+                        <div class="h-full rounded-full bg-yellow-500"
+                             id="ach-{{ forloop.counter }}"
+                             data-width="{{ achievement.progress }}">
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Upcoming Deadlines -->
+        <div class="bg-white border-2 border-gray-100 rounded-2xl shadow-xl overflow-hidden">
+            <div class="bg-gradient-to-r from-red-50 to-orange-50 border-b-2 border-gray-100 p-5">
+                <h2 class="text-lg font-bold text-gray-900">⏰ Upcoming</h2>
+            </div>
+            <div class="p-4 space-y-3">
+                {% for task in upcoming_tasks %}
+                <div class="p-3 border-2 border-gray-100 rounded-xl hover:border-red-200 transition-all">
+                    <div class="font-semibold text-sm text-gray-900 mb-2">{{ task.title }}</div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs px-2 py-1 rounded-full font-bold
+                            {% if task.priority == 'High' %}bg-red-100 text-red-800
+                            {% elif task.priority == 'Medium' %}bg-yellow-100 text-yellow-800
+                            {% else %}bg-blue-100 text-blue-800{% endif %}">
+                            {{ task.priority }}
+                        </span>
+                        <span class="text-xs font-bold {% if task.days_left <= 3 %}text-red-600{% else %}text-gray-500{% endif %}">
+                            {{ task.days_left }}d left
+                        </span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="bg-white border-2 border-gray-100 rounded-2xl shadow-xl overflow-hidden">
+            <div class="bg-gradient-to-r from-green-50 to-emerald-50 border-b-2 border-gray-100 p-5">
+                <h2 class="text-lg font-bold text-gray-900">📋 Activity Feed</h2>
+            </div>
+            <div class="p-4 space-y-3">
+                {% for activity in recent_activity %}
+                <div class="pb-3 border-b border-gray-100 last:border-0">
+                    <div class="flex items-start gap-3">
+                        <span class="text-2xl">{{ activity.emoji }}</span>
+                        <div>
+                            <div class="font-medium text-sm text-gray-900">{{ activity.title }}</div>
+                            <div class="flex items-center gap-2 mt-1">
+                                <span class="text-xs px-2 py-1 rounded-full font-semibold bg-red-50 text-red-700">{{ activity.type }}</span>
+                                <span class="text-xs text-gray-500">{{ activity.time }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- Motivational Banner -->
+<div class="bg-gradient-to-r from-purple-600 via-pink-500 to-red-500 rounded-2xl p-8 text-white shadow-2xl relative overflow-hidden">
+    <div class="absolute top-0 right-0 text-9xl opacity-10">🎯</div>
+    <div class="relative grid md:grid-cols-2 gap-6 items-center">
+        <div>
+            <div class="text-3xl font-bold mb-2">You're on fire! 🔥</div>
+            <p class="text-lg text-purple-100 mb-4">
+                You've completed 72% of your tasks and studied 42 hours this week. That's incredible progress!
+            </p>
+            <a href="#" class="inline-block bg-white text-purple-600 font-bold px-6 py-3 rounded-xl hover:bg-purple-50 transition-all shadow-xl">
+                View Full Progress →
+            </a>
+        </div>
+        <div class="hidden md:flex justify-center text-9xl">🚀</div>
+    </div>
+</div>
+
+<!-- ✅ Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    // ✅ Set all progress bar widths
+    document.querySelectorAll('[data-width]').forEach(function(el) {
+        el.style.width = el.getAttribute('data-width') + '%';
+    });
+
+    // ✅ Study Hours Bar Chart
+    const ctx = document.getElementById('studyChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+            datasets: [
+                {
+                    label: 'Study Hours',
+                    data: [6, 5, 8, 7, 6, 5, 5],
+                    backgroundColor: '#8C1007',
+                    borderRadius: 8,
+                },
+                {
+                    label: 'Goal',
+                    data: [7, 7, 7, 7, 7, 7, 7],
+                    backgroundColor: '#f3f4f6',
+                    borderRadius: 8,
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: '#fff',
+                    titleColor: '#111',
+                    bodyColor: '#555',
+                    borderColor: '#fee2e2',
+                    borderWidth: 2,
+                    padding: 10,
+                    cornerRadius: 12,
+                }
+            },
+            scales: {
+                x: { grid: { display: false }, border: { display: false } },
+                y: { grid: { display: false }, border: { display: false } }
+            }
+        }
+    });
+</script>
+
+{% endblock %}
