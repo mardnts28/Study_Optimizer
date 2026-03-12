@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-#bqda6bj+-8c14(3qv%^-7ipvpo7y)opc)amw(ifrhh&ds2t2i
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -76,13 +76,14 @@ WSGI_APPLICATION = 'studyoptimizer.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'blog',             
-        'USER': 'studyoptimizeradmin',         
-        'PASSWORD': 'study_optimizeradmin123',  
-        'HOST': 'localhost',
-        'PORT': '5432',
+        'NAME': 'blog',                            
+        'USER': 'postgres',                        
+        'PASSWORD': 'studyoptimizer123',       
+        'HOST': 'localhost',                       
+        'PORT': '5432',                            
     }
 }
+
 
 
 # Password validation
@@ -125,3 +126,7 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+LOGIN_URL = 'login'
+LOGIN_REDIRECT_URL = 'dashboard'
+LOGOUT_REDIRECT_URL = 'home'

@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Progress - StudyOptimizer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-gradient-to-br from-white via-purple-50/20 to-white min-h-screen">
+    <nav class="sticky top-0 z-50 bg-white border-b border-gray-100">
+        <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+            <a href="/dashboard/" class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background-color: #8C1007;">
+                    <i data-lucide="book-open" class="w-5 h-5 text-white"></i>
+                </div>
+                <span class="font-bold text-gray-900">StudyOptimizer</span>
+            </a>
+            <div class="flex items-center gap-6 text-sm font-medium text-gray-500">
+                <a href="/dashboard/" class="hover:text-gray-900 transition-colors">Dashboard</a>
+                <a href="/upload/" class="hover:text-gray-900 transition-colors">Upload</a>
+                <a href="/tasks/" class="hover:text-gray-900 transition-colors">Tasks</a>
+                <a href="/collaborate/" class="hover:text-gray-900 transition-colors">Collaborate</a>
+                <a href="/progress/" class="bg-purple-50 text-purple-700 px-4 py-2 rounded-full">Progress</a>
+                <a href="/profile/" class="hover:text-gray-900 transition-colors">Profile</a>
+                <div class="w-px h-6 bg-gray-200 mx-2"></div>
+                <a href="/logout/" class="flex items-center gap-2 hover:text-gray-900 transition-colors">
+                    <i data-lucide="log-out" class="w-4 h-4"></i>
+                    Logout
+                </a>
+            </div>
+        </div>
+    </nav>
+    <div x-data="progressApp()" x-init="initCharts()" class="max-w-7xl mx-auto px-6 py-8">
+        <div class="mb-8">
+            <div class="flex items-center gap-3 mb-2">
+                <h1 class="text-3xl font-bold text-gray-900">Progress Tracker</h1>
+                <span class="text-3xl">📊</span>
+            </div>
+            <p class="text-gray-600">Watch yourself grow and celebrate every win! 🎉</p>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            <template x-for="stat in stats" :key="stat.label">
+                <div class="bg-white rounded-2xl border-2 border-gray-100 hover:border-red-200 transition-all hover:shadow-lg hover:-translate-y-1 relative overflow-hidden group p-6">
+                    <div class="absolute top-0 right-0 text-7xl opacity-5 group-hover:opacity-10 transition-opacity" x-text="stat.emoji"></div>
+                    <div class="relative">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="text-sm font-semibold text-gray-600" x-text="stat.label"></div>
+                            <div class="w-10 h-10 rounded-xl flex items-center justify-center text-white" :style="`background-color: ${stat.color}15; color: ${stat.color}`">
+                                <i :data-lucide="stat.icon" class="w-5 h-5"></i>
+                            </div>
+                        </div>
+                        <div class="text-3xl font-bold text-gray-900" x-text="stat.value"></div>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+        <!-- Level Progress Banner -->
+        <div class="mb-8 p-6 bg-gradient-to-r from-purple-600 via-pink-500 to-red-500 rounded-2xl text-white shadow-2xl relative overflow-hidden">
+            <div class="absolute top-0 right-0 text-9xl opacity-10">🌟</div>
+            <div class="relative">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <div class="text-sm font-medium text-purple-100 mb-1">Your Progress Level</div>
+                        <div class="text-3xl font-bold">Level 8 - Rising Star ⭐</div>
+                    </div>
+                    <div class="text-5xl">🚀</div>
+                </div>
+                <div class="bg-white/20 rounded-full h-4 overflow-hidden backdrop-blur-sm">
+                    <div class="bg-white h-full rounded-full transition-all duration-1000" style="width: 76%"></div>
+                </div>
+                <div class="mt-2 text-sm text-purple-100">76% to Level 9 - Keep going! 🎯</div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <!-- Study Hours Trend -->
+            <div class="lg:col-span-2 bg-white rounded-2xl border-2 border-gray-100 shadow-xl overflow-hidden">
+                <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-b-2 border-gray-100 p-6">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="zap" class="w-5 h-5 text-red-700"></i>
+                        <h3 class="font-semibold text-lg">Study Hours Growth</h3>
+                        <span class="text-lg">📈</span>
+                    </div>
+                </div>
+                <div class="p-6">
+                    <div style="height: 280px;"><canvas id="hoursChart"></canvas></div>
+                    <div class="mt-4 p-3 bg-green-50 border-2 border-green-200 rounded-xl">
+                        <div class="flex items-center gap-2 text-sm font-semibold text-green-700">
+                            <i data-lucide="trending-up" class="w-4 h-4"></i>
+                            <span>+50% increase from last month! 🎉</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Achievements Sidebar -->
+            <div class="bg-gradient-to-br from-yellow-50 to-white rounded-2xl border-2 border-yellow-200 shadow-xl overflow-hidden">
+                <div class="bg-gradient-to-r from-yellow-100 to-orange-100 border-b-2 border-yellow-200 p-6">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="trophy" class="w-5 h-5 text-yellow-600"></i>
+                        <h3 class="font-semibold text-lg">Achievements</h3>
+                        <span class="text-lg">🏆</span>
+                    </div>
+                </div>
+                <div class="p-4">
+                    <div class="space-y-3 max-h-96 overflow-y-auto pr-2">
+                        <template x-for="achievement in achievements" :key="achievement.id">
+                            <div :class="achievement.unlocked ? 'bg-white border-yellow-300 shadow-md hover:shadow-lg hover:-translate-y-0.5' : 'bg-gray-50 border-gray-200 opacity-60'" class="p-4 rounded-xl border-2 transition-all">
+                                <div class="flex items-center gap-3">
+                                    <div :class="achievement.unlocked ? 'animate-bounce' : 'grayscale'" class="text-3xl" x-text="achievement.emoji"></div>
+                                    <div class="flex-1">
+                                        <div class="font-bold text-sm text-gray-900" x-text="achievement.title"></div>
+                                        <div class="text-xs text-gray-600" x-text="achievement.description"></div>
+                                        <template x-if="achievement.unlocked">
+                                            <div class="text-xs font-bold text-yellow-600 mt-1">Unlocked! ✨</div>
+                                        </template>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Task Completion -->
+            <div class="bg-white rounded-2xl border-2 border-gray-100 shadow-xl overflow-hidden">
+                <div class="bg-gradient-to-r from-green-50 to-emerald-50 border-b-2 border-gray-100 p-6">
+                    <div class="flex items-center gap-2">
+                        <h3 class="font-semibold text-lg">Task Completion</h3>
+                        <span class="text-lg">✅</span>
+                    </div>
+                </div>
+                <div class="p-6">
+                    <div style="height: 280px;"><canvas id="taskChart"></canvas></div>
+                </div>
+            </div>
+
+            <!-- Time by Subject -->
+            <div class="bg-white rounded-2xl border-2 border-gray-100 shadow-xl overflow-hidden">
+                <div class="bg-gradient-to-r from-pink-50 to-red-50 border-b-2 border-gray-100 p-6">
+                    <div class="flex items-center gap-2">
+                        <h3 class="font-semibold text-lg">Time by Subject</h3>
+                        <span class="text-lg">📚</span>
+                    </div>
+                </div>
+                <div class="p-6 flex items-center justify-center">
+                    <div style="height: 280px; width: 100%;"><canvas id="subjectChart"></canvas></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Motivational Footer -->
+        <div class="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="p-6 bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl border-2 border-blue-200">
+                <div class="text-3xl mb-2">💡</div>
+                <div class="font-bold text-sm text-gray-900 mb-1">Pro Tip</div>
+                <div class="text-xs text-gray-700">Study in 25-min blocks with 5-min breaks for better focus!</div>
+            </div>
+            <div class="p-6 bg-gradient-to-br from-green-50 to-green-100 rounded-2xl border-2 border-green-200">
+                <div class="text-3xl mb-2">🎯</div>
+                <div class="font-bold text-sm text-gray-900 mb-1">Goal Reminder</div>
+                <div class="text-xs text-gray-700">You need 3 more tasks to unlock "Task Master" achievement!</div>
+            </div>
+            <div class="p-6 bg-gradient-to-br from-purple-50 to-purple-100 rounded-2xl border-2 border-purple-200">
+                <div class="text-3xl mb-2">⚡</div>
+                <div class="font-bold text-sm text-gray-900 mb-1">Streak Alert</div>
+                <div class="text-xs text-gray-700">Keep your 7-day streak going! Study today to maintain it!</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function progressApp() {
+            return {
+                stats: [
+                    { label: 'Study Streak', value: '{{ streak }} days', icon: 'flame', color: '#FF6B35', emoji: '🔥' },
+                    { label: 'Total Hours', value: '{{ study_hours }}h', icon: 'clock', color: '#8C1007', emoji: '⏰' },
+                    { label: 'Goals Hit', value: '{{ completed_count }}/{{ total_tasks }}', icon: 'target', color: '#660B05', emoji: '🎯' },
+                    { label: 'Avg Score', value: '81.5%', icon: 'award', color: '#3E0703', emoji: '⭐' },
+                ],
+                achievements: [
+                    { id: 1, title: '7-Day Streak', description: 'Studied for a week straight!', emoji: '🔥', unlocked: true },
+                    { id: 2, title: 'Early Bird', description: 'Completed 10 tasks early', emoji: '🐦', unlocked: true },
+                    { id: 3, title: 'Night Owl', description: 'Late night study sessions', emoji: '🦉', unlocked: true },
+                    { id: 4, title: 'Task Master', description: 'Complete 50 tasks', emoji: '🏆', unlocked: false },
+                    { id: 5, title: 'Speed Learner', description: 'Summarize 100 docs', emoji: '⚡', unlocked: false },
+                    { id: 6, title: 'Perfect Score', description: 'Get 100% on a test', emoji: '💯', unlocked: false },
+                ],
+                periodStats: JSON.parse('{{ period_stats_json|safe }}'),
+                initCharts() {
+                    this.$nextTick(() => {
+                        if(window.lucide) { lucide.createIcons(); }
+
+                        // Chart Defaults
+                        Chart.defaults.font.family = "'Inter', sans-serif";
+                        Chart.defaults.color = "#6B7280";
+
+                        // Line Chart
+                        const hCtx = document.getElementById('hoursChart').getContext('2d');
+                        new Chart(hCtx, {
+                            type: 'line',
+                            data: {
+                                labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+                                datasets: [{
+                                    label: 'Hours',
+                                    data: [28, 32, 25, 42],
+                                    borderColor: '#8C1007',
+                                    borderWidth: 3,
+                                    pointBackgroundColor: '#8C1007',
+                                    pointRadius: 6,
+                                    pointHoverRadius: 8,
+                                    fill: false,
+                                    tension: 0.4
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: { legend: { display: false } },
+                                scales: {
+                                    y: { beginAtZero: true, grid: { display: false } },
+                                    x: { grid: { display: false } }
+                                }
+                            }
+                        });
+
+
+                        // Bar Chart
+                        const tCtx = document.getElementById('taskChart').getContext('2d');
+                        new Chart(tCtx, {
+                            type: 'bar',
+                            data: {
+                                labels: this.periodStats.map(s => s.period),
+                                datasets: [
+                                    {
+                                        label: 'Completed',
+                                        data: this.periodStats.map(s => s.completed),
+                                        backgroundColor: '#8C1007',
+                                        borderRadius: 8
+                                    },
+                                    {
+                                        label: 'Total',
+                                        data: this.periodStats.map(s => s.total),
+                                        backgroundColor: '#e5e7eb',
+                                        borderRadius: 8
+                                    }
+                                ]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                scales: {
+                                    x: { stacked: false, grid: { display: false } },
+                                    y: { stacked: false, beginAtZero: true, grid: { display: false } }
+                                }
+                            }
+                        });
+
+                        // Pie Chart
+                        const sCtx = document.getElementById('subjectChart').getContext('2d');
+                        new Chart(sCtx, {
+                            type: 'pie',
+                            data: {
+                                labels: ['Computer Science', 'Mathematics', 'Physics', 'English', 'Other Subjects'],
+                                datasets: [{
+                                    data: [35, 25, 20, 12, 8],
+                                    backgroundColor: ['#8C1007', '#660B05', '#3E0703', '#B91C1C', '#DC2626'],
+                                    borderWidth: 0
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: { position: 'right' }
+                                }
+                            }
+                        });
+
+                    });
+                }
+            }
+        }
+        
+        document.addEventListener("DOMContentLoaded", function() {
+            if(window.lucide) { lucide.createIcons(); }
+        });
+    </script>
+</body>
+</html>

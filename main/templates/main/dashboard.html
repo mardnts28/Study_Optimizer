@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard - StudyOptimizer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-gradient-to-br from-white via-red-50/20 to-orange-50/20 min-h-screen">
+    <nav class="sticky top-0 z-50 bg-white border-b border-gray-100">
+        <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+            <a href="/dashboard/" class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background-color: #8C1007;">
+                    <i data-lucide="book-open" class="w-5 h-5 text-white"></i>
+                </div>
+                <span class="font-bold text-gray-900">StudyOptimizer</span>
+            </a>
+            <div class="flex items-center gap-6 text-sm font-medium text-gray-500">
+                <a href="/dashboard/" class="bg-red-50 text-red-700 px-4 py-2 rounded-full">Dashboard</a>
+                <a href="/upload/" class="hover:text-gray-900 transition-colors">Upload</a>
+                <a href="/tasks/" class="hover:text-gray-900 transition-colors">Tasks</a>
+                <a href="/collaborate/" class="hover:text-gray-900 transition-colors">Collaborate</a>
+                <a href="/progress/" class="hover:text-gray-900 transition-colors">Progress</a>
+                <a href="/profile/" class="hover:text-gray-900 transition-colors">Profile</a>
+                <div class="w-px h-6 bg-gray-200 mx-2"></div>
+                <a href="/logout/" class="flex items-center gap-2 hover:text-gray-900 transition-colors">
+                    <i data-lucide="log-out" class="w-4 h-4"></i>
+                    Logout
+                </a>
+            </div>
+        </div>
+    </nav>
+    <div x-data="dashboardApp()" x-init="initCharts()" class="max-w-7xl mx-auto px-6 py-8">
+        <!-- Welcome Header -->
+        <div class="mb-8">
+            <div class="flex items-center justify-between flex-wrap gap-4">
+                <div>
+                    <div class="flex items-center gap-3 mb-2">
+                        <h1 class="text-4xl font-bold text-gray-900">Good morning, {{ user.username }}! 👋</h1>
+                    </div>
+                    <p class="text-gray-600">Here's your study overview for today</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button @click="showSchedule = !showSchedule" class="flex items-center gap-2 border-2 px-4 py-2 rounded-md font-medium text-sm hover:bg-gray-50 transition-colors">
+                        <i data-lucide="calendar" class="w-4 h-4"></i>
+                        Schedule
+                    </button>
+                    <div class="relative" @click.away="showAlerts = false">
+                        <button @click="showAlerts = !showAlerts" class="relative flex items-center gap-2 border-2 px-4 py-2 rounded-md font-medium text-sm hover:bg-gray-50 transition-all active:scale-95">
+                            <i data-lucide="bell" class="w-4 h-4"></i>
+                            <span class="absolute -top-2 -right-2 w-5 h-5 bg-red-500 rounded-full text-xs text-white flex items-center justify-center font-bold shadow-lg">3</span>
+                            Notifications
+                        </button>
+                        
+                        <!-- Notifications Dropdown -->
+                        <div x-show="showAlerts" 
+                             x-transition:enter="transition ease-out duration-200"
+                             x-transition:enter-start="opacity-0 translate-y-2 scale-95"
+                             x-transition:enter-end="opacity-100 translate-y-0 scale-100"
+                             x-transition:leave="transition ease-in duration-150"
+                             x-transition:leave-start="opacity-100 translate-y-0 scale-100"
+                             x-transition:leave-end="opacity-0 translate-y-2 scale-95"
+                             class="absolute right-0 mt-3 w-80 bg-white rounded-2xl shadow-2xl border-2 border-gray-100 z-[60] overflow-hidden" 
+                             style="display: none;">
+                            <div class="p-4 border-b border-gray-100 bg-red-50/50 flex items-center justify-between">
+                                <h3 class="font-bold text-gray-900 flex items-center gap-2">
+                                    <i data-lucide="bell-ring" class="w-4 h-4 text-red-600"></i>
+                                    Notifications
+                                </h3>
+                                <span class="bg-red-100 text-red-700 text-[10px] font-bold px-2 py-1 rounded-full">3 NEW</span>
+                            </div>
+                            <div class="max-h-[360px] overflow-y-auto p-4 space-y-3">
+                                <div class="p-3 bg-red-50 rounded-xl border border-red-100 hover:bg-red-100 transition-colors cursor-pointer group">
+                                    <div class="flex gap-3">
+                                        <span class="text-xl">⚠️</span>
+                                        <div>
+                                            <div class="font-bold text-xs text-red-900 group-hover:text-red-700">Database Final Exam</div>
+                                            <p class="text-[10px] text-red-600">Due in 3 days - Mar 8</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="p-3 bg-yellow-50 rounded-xl border border-yellow-100 hover:bg-yellow-100 transition-colors cursor-pointer group">
+                                    <div class="flex gap-3">
+                                        <span class="text-xl">📝</span>
+                                        <div>
+                                            <div class="font-bold text-xs text-yellow-900 group-hover:text-yellow-700">Algorithm Assignment</div>
+                                            <p class="text-[10px] text-yellow-600">Due in 5 days - Mar 10</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="p-3 bg-green-50 rounded-xl border border-green-100 hover:bg-green-100 transition-colors cursor-pointer group">
+                                    <div class="flex gap-3">
+                                        <span class="text-xl">🎉</span>
+                                        <div>
+                                            <div class="font-bold text-xs text-green-900 group-hover:text-green-700">Great Progress!</div>
+                                            <p class="text-[10px] text-green-600">You've completed 72% tasks</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="p-3 bg-gray-50 border-t border-gray-100 text-center text-[10px] font-bold text-gray-400 hover:text-gray-600 cursor-pointer">
+                                MARK ALL AS READ
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <template x-for="stat in stats" :key="stat.label">
+                <div class="bg-white rounded-2xl border-2 border-gray-100 hover:border-red-200 transition-all hover:shadow-xl hover:-translate-y-2 cursor-pointer relative overflow-hidden group p-6">
+                    <div class="absolute top-0 right-0 text-8xl opacity-5 group-hover:opacity-10 transition-opacity group-hover:scale-110" x-text="stat.emoji"></div>
+                    <div class="absolute top-0 left-0 w-1 h-full transition-all group-hover:w-2" :style="{ backgroundColor: stat.color }"></div>
+                    <div class="relative">
+                        <div class="flex items-start justify-between mb-4">
+                            <div class="text-sm font-semibold text-gray-600" x-text="stat.label"></div>
+                            <div class="w-12 h-12 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110 text-white" 
+                                 :style="`background-color: ${stat.bgColor}; color: ${stat.color}`">
+                                <i :data-lucide="stat.icon" class="w-6 h-6"></i>
+                            </div>
+                        </div>
+                        <div class="text-3xl font-bold text-gray-900 mb-2" x-text="stat.value"></div>
+                        <div class="text-xs font-semibold flex items-center gap-1" :style="{ color: stat.color }">
+                            <i data-lucide="trending-up" class="w-3 h-3"></i>
+                            <span x-text="stat.change"></span>
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+        <!-- Main Content Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <!-- Left Column -->
+            <div class="lg:col-span-2 space-y-6">
+                <!-- Quick Actions -->
+                <div class="bg-white rounded-2xl border-2 border-gray-100 shadow-xl overflow-hidden">
+                    <div class="bg-gradient-to-r from-red-600 via-red-500 to-orange-500 text-white p-6">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="zap" class="w-5 h-5"></i>
+                            <h3 class="font-semibold text-lg">Quick Actions</h3>
+                            <span class="text-lg">⚡</span>
+                        </div>
+                    </div>
+                    <div class="p-6">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <a href="/upload/" class="group block w-full p-6 text-left border-2 border-gray-100 rounded-2xl hover:border-red-300 transition-all hover:shadow-lg hover:-translate-y-1 bg-gradient-to-br from-white to-red-50/50 relative overflow-hidden">
+                                <div class="absolute top-0 right-0 text-6xl opacity-5 group-hover:opacity-10">📄</div>
+                                <div class="text-4xl mb-3 group-hover:scale-125 transition-transform">📄</div>
+                                <div class="font-bold text-gray-900 mb-1">Upload & Summarize</div>
+                                <div class="text-xs text-gray-600 mb-3">AI-powered summaries</div>
+                                <div class="flex items-center text-xs font-semibold text-red-700">
+                                    Start now <i data-lucide="arrow-right" class="w-3 h-3 ml-1 group-hover:translate-x-1 transition-transform"></i>
+                                </div>
+                            </a>
+                            <a href="/tasks/" class="group block w-full p-6 text-left border-2 border-gray-100 rounded-2xl hover:border-orange-300 transition-all hover:shadow-lg hover:-translate-y-1 bg-gradient-to-br from-white to-orange-50/50 relative overflow-hidden">
+                                <div class="absolute top-0 right-0 text-6xl opacity-5 group-hover:opacity-10">✅</div>
+                                <div class="text-4xl mb-3 group-hover:scale-125 transition-transform">✅</div>
+                                <div class="font-bold text-gray-900 mb-1">Manage Tasks</div>
+                                <div class="text-xs text-gray-600 mb-3">Stay organized</div>
+                                <div class="flex items-center text-xs font-semibold text-red-700">
+                                    View tasks <i data-lucide="arrow-right" class="w-3 h-3 ml-1 group-hover:translate-x-1 transition-transform"></i>
+                                </div>
+                            </a>
+                            <a href="/progress/" class="group block w-full p-6 text-left border-2 border-gray-100 rounded-2xl hover:border-purple-300 transition-all hover:shadow-lg hover:-translate-y-1 bg-gradient-to-br from-white to-purple-50/50 relative overflow-hidden">
+                                <div class="absolute top-0 right-0 text-6xl opacity-5 group-hover:opacity-10">📊</div>
+                                <div class="text-4xl mb-3 group-hover:scale-125 transition-transform">📊</div>
+                                <div class="font-bold text-gray-900 mb-1">Track Progress</div>
+                                <div class="text-xs text-gray-600 mb-3">See your growth</div>
+                                <div class="flex items-center text-xs font-semibold text-red-700">
+                                    View stats <i data-lucide="arrow-right" class="w-3 h-3 ml-1 group-hover:translate-x-1 transition-transform"></i>
+                                </div>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Study Hours Chart -->
+                <div class="bg-white rounded-2xl border-2 border-gray-100 shadow-xl overflow-hidden">
+                    <div class="bg-gradient-to-r from-blue-50 to-cyan-50 border-b-2 border-gray-100 p-6">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <i data-lucide="bar-chart-2" class="w-5 h-5 text-red-700"></i>
+                                <h3 class="font-semibold text-lg text-gray-900">This Week's Study Hours</h3>
+                                <span class="text-lg">📚</span>
+                            </div>
+                            <div class="px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-full text-xs font-bold shadow-lg">
+                                +8h from last week! 🎉
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-6">
+                        <div style="height: 240px;"><canvas id="weeklyChart"></canvas></div>
+                        <div class="grid grid-cols-2 gap-3 mt-4">
+                            <div class="p-3 bg-red-50 border-2 border-red-100 rounded-xl">
+                                <div class="text-xs text-gray-600 mb-1">Total This Week</div>
+                                <div class="text-2xl font-bold" style="color: #8C1007">42h</div>
+                            </div>
+                            <div class="p-3 bg-blue-50 border-2 border-blue-100 rounded-xl">
+                                <div class="text-xs text-gray-600 mb-1">Daily Average</div>
+                                <div class="text-2xl font-bold text-blue-600">6h</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Period Breakdown -->
+                <div class="bg-white rounded-2xl border-2 border-gray-100 shadow-xl overflow-hidden">
+                    <div class="bg-gradient-to-r from-purple-50 to-pink-50 border-b-2 border-gray-100 p-6">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="target" class="w-5 h-5 text-red-700"></i>
+                            <h3 class="font-semibold text-lg text-gray-900">Academic Period Progress</h3>
+                            <span class="text-lg">🎯</span>
+                        </div>
+                    </div>
+                    <div class="p-6 space-y-4">
+                        <template x-for="(period, i) in periodData" :key="i">
+                            <div class="p-4 border-2 border-gray-100 rounded-xl hover:border-red-200 transition-all hover:shadow-md cursor-pointer group">
+                                <div class="flex items-center justify-between mb-3">
+                                    <div class="flex items-center gap-3">
+                                        <div class="text-3xl group-hover:scale-110 transition-transform" x-text="period.icon"></div>
+                                        <div>
+                                            <div class="font-bold text-gray-900" x-text="period.name"></div>
+                                            <div class="text-xs text-gray-600">Tasks: <span x-text="period.tasks"></span></div>
+                                        </div>
+                                    </div>
+                                    <div class="text-2xl font-bold" :style="{ color: period.color }" x-text="period.value + '%'"></div>
+                                </div>
+                                <div class="bg-gray-200 rounded-full h-3 overflow-hidden">
+                                    <div class="h-full rounded-full transition-all duration-1000" :style="`width: ${period.value}%; background-color: ${period.color}`"></div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Sidebar -->
+            <div class="space-y-6">
+                <!-- Achievements -->
+                <div class="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-2xl border-2 border-yellow-200 shadow-xl overflow-hidden">
+                    <div class="bg-gradient-to-r from-yellow-100 to-orange-100 border-b-2 border-yellow-200 p-6">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="trophy" class="w-5 h-5 text-yellow-600"></i>
+                            <h3 class="font-semibold text-lg text-gray-900">Achievements</h3>
+                            <span class="text-lg">🏆</span>
+                        </div>
+                    </div>
+                    <div class="p-4 space-y-3">
+                        <template x-for="(achievement, i) in achievements" :key="i">
+                            <div :class="achievement.unlocked ? 'bg-white border-yellow-300 shadow-md' : 'bg-gray-50 border-gray-200'" class="p-3 rounded-xl border-2 transition-all">
+                                <div class="flex items-center gap-3 mb-2">
+                                    <div :class="achievement.unlocked ? 'animate-bounce' : 'grayscale opacity-50'" class="text-2xl" x-text="achievement.emoji"></div>
+                                    <div class="flex-1">
+                                        <div class="font-bold text-sm text-gray-900" x-text="achievement.title"></div>
+                                        <template x-if="achievement.unlocked">
+                                            <div class="text-xs font-bold text-yellow-600">Unlocked! ✨</div>
+                                        </template>
+                                        <template x-if="!achievement.unlocked">
+                                            <div class="text-xs text-gray-600"><span x-text="achievement.progress"></span>% complete</div>
+                                        </template>
+                                    </div>
+                                </div>
+                                <template x-if="!achievement.unlocked">
+                                    <div class="bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                                        <div class="bg-yellow-500 h-full rounded-full transition-all" :style="`width: ${achievement.progress}%`"></div>
+                                    </div>
+                                </template>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- Upcoming Deadlines -->
+                <div class="bg-white rounded-2xl border-2 border-gray-100 shadow-xl overflow-hidden">
+                    <div class="bg-gradient-to-r from-red-50 to-orange-50 border-b-2 border-gray-100 p-6">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="clock" class="w-5 h-5 text-red-700"></i>
+                            <h3 class="font-semibold text-lg text-gray-900">Upcoming</h3>
+                            <span class="text-lg">⏰</span>
+                        </div>
+                    </div>
+                    <div class="p-4">
+                        <div class="space-y-3">
+                            <template x-for="(task, i) in upcomingTasks" :key="i">
+                                <div class="p-3 border-2 border-gray-100 rounded-xl hover:border-red-200 transition-all hover:shadow-md cursor-pointer">
+                                    <div class="font-semibold text-sm text-gray-900 mb-2" x-text="task.title"></div>
+                                    <div class="flex items-center justify-between gap-2">
+                                        <span class="text-xs px-2 py-1 rounded-full font-bold border-2" :style="`background-color: ${getPriorityStyle(task.priority).bg}; color: ${getPriorityStyle(task.priority).text}; border-color: ${getPriorityStyle(task.priority).border}`" x-text="task.priority"></span>
+                                        <span class="text-xs font-bold" :style="`color: ${task.daysLeft <= 3 ? '#DC2626' : '#6B7280'}`" x-text="task.daysLeft + 'd left'"></span>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                        <a href="/tasks/">
+                            <button class="w-full mt-4 flex justify-center items-center gap-2 py-2 px-4 shadow rounded-md border text-sm font-medium hover:bg-gray-50 transition-colors">
+                                View All Tasks
+                                <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                            </button>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Recent Activity -->
+                <div class="bg-white rounded-2xl border-2 border-gray-100 shadow-xl overflow-hidden">
+                    <div class="bg-gradient-to-r from-green-50 to-emerald-50 border-b-2 border-gray-100 p-6">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="flame" class="w-5 h-5 text-red-700"></i>
+                            <h3 class="font-semibold text-lg text-gray-900">Activity Feed</h3>
+                            <span class="text-lg">📋</span>
+                        </div>
+                    </div>
+                    <div class="p-4">
+                        <div class="space-y-3">
+                            <template x-for="(activity, i) in recentActivity" :key="i">
+                                <div class="pb-3 border-b border-gray-100 last:border-0 last:pb-0">
+                                    <div class="flex items-start gap-3">
+                                        <span class="text-2xl flex-shrink-0" x-text="activity.emoji"></span>
+                                        <div class="flex-1 min-w-0">
+                                            <div class="font-medium text-sm text-gray-900 truncate mb-1" x-text="activity.title"></div>
+                                            <div class="flex items-center gap-2 flex-wrap">
+                                                <span class="text-xs px-2 py-1 rounded-full font-semibold bg-red-50 text-red-700 border border-red-100" x-text="activity.type"></span>
+                                                <span class="text-xs text-gray-500" x-text="activity.time"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Motivational Banner -->
+        <div class="bg-gradient-to-r from-purple-600 via-pink-500 to-red-500 rounded-2xl p-8 text-white shadow-2xl shadow-purple-300/50 relative overflow-hidden">
+            <div class="absolute top-0 right-0 text-9xl opacity-10 animate-bounce">🎯</div>
+            <div class="absolute bottom-0 left-0 text-9xl opacity-10">✨</div>
+            <div class="relative grid md:grid-cols-2 gap-6 items-center">
+                <div>
+                    <div class="text-3xl font-bold mb-2">You're on fire! 🔥</div>
+                    <div class="text-lg text-purple-100 mb-4">You've completed 72% of your tasks and studied 42 hours this week. That's incredible progress!</div>
+                    <div class="flex items-center gap-4">
+                        <a href="/progress">
+                            <button class="bg-white text-purple-600 hover:bg-purple-50 flex items-center gap-2 py-2 px-6 rounded-lg shadow-xl font-bold transition-all">
+                                View Full Progress
+                                <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                            </button>
+                        </a>
+                    </div>
+                </div>
+                <div class="hidden md:flex justify-center">
+                    <div class="text-9xl animate-pulse">🚀</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Schedule Modal -->
+        <div x-show="showSchedule" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" style="display: none;">
+            <div @click.away="showSchedule = false" class="bg-white rounded-2xl max-w-md w-full shadow-2xl">
+                <div class="p-6 border-b border-gray-200 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <i data-lucide="calendar" class="w-6 h-6 text-red-700"></i>
+                        <h2 class="text-xl font-bold text-gray-900">Study Schedule 📅</h2>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button @click="isScheduling = !isScheduling" class="p-2 hover:bg-red-50 text-gray-400 hover:text-red-700 rounded-lg transition-all" :title="isScheduling ? 'Back to View' : 'Add Activity'">
+                            <i :data-lucide="isScheduling ? 'arrow-left' : 'plus'" class="w-5 h-5"></i>
+                        </button>
+                        <button @click="showSchedule = false" class="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                            <i data-lucide="x" class="w-5 h-5 text-gray-500"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="p-6 space-y-4">
+                    <!-- Add Activity Form -->
+                    <div x-show="isScheduling" class="space-y-4 bg-gray-50 p-4 rounded-xl border border-gray-200" x-transition>
+                        <h3 class="font-bold text-sm text-gray-900">Add New Activity</h3>
+                        <div class="grid grid-cols-2 gap-3">
+                            <select x-model="newSchedule.day" class="w-full text-xs p-2 border rounded-lg focus:ring-2 focus:ring-red-500 outline-none">
+                                <option value="">Select Day</option>
+                                <template x-for="day in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']">
+                                    <option :value="day" x-text="day"></option>
+                                </template>
+                            </select>
+                            <input type="text" x-model="newSchedule.time" placeholder="e.g. 9:00 AM - 10:30 AM" class="w-full text-xs p-2 border rounded-lg focus:ring-2 focus:ring-red-500 outline-none">
+                        </div>
+                        <input type="text" x-model="newSchedule.activity" placeholder="Activity name..." class="w-full text-xs p-2 border rounded-lg focus:ring-2 focus:ring-red-500 outline-none">
+                        <button @click="saveSchedule" class="w-full py-2 bg-red-700 text-white rounded-lg text-xs font-bold hover:bg-red-800 transition-colors flex items-center justify-center gap-2">
+                            <i data-lucide="save" class="w-3 h-3"></i>
+                            Save to Schedule
+                        </button>
+                    </div>
+
+                    <!-- Schedule List -->
+                    <div x-show="!isScheduling" class="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+                        <template x-if="scheduleItems.length === 0">
+                            <div class="text-center py-8">
+                                <div class="text-4xl mb-2 text-gray-300">📅</div>
+                                <p class="text-sm text-gray-500">No activities scheduled yet.</p>
+                                <button @click="isScheduling = true" class="mt-2 text-xs text-red-700 font-bold hover:underline">Add your first activity</button>
+                            </div>
+                        </template>
+                        <template x-for="day in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']" :key="day">
+                            <div x-show="scheduleItems.some(i => i.day === day)" class="mb-4">
+                                <div class="font-bold text-[10px] uppercase tracking-wider text-gray-400 mb-2" x-text="day"></div>
+                                <div class="space-y-2">
+                                    <template x-for="item in scheduleItems.filter(i => i.day === day)" :key="item.id">
+                                        <div class="flex items-center justify-between p-3 border-2 border-gray-100 rounded-xl hover:border-red-200 transition-all group/item">
+                                            <div class="flex items-center gap-3">
+                                                <div class="w-2 h-8 rounded-full" :style="{ backgroundColor: getDayColor(item.color) }"></div>
+                                                <div>
+                                                    <div class="text-xs font-bold text-gray-900" x-text="item.activity"></div>
+                                                    <div class="text-[10px] text-gray-500" x-text="item.time"></div>
+                                                </div>
+                                            </div>
+                                            <button @click="deleteSchedule(item.id)" class="opacity-0 group-hover/item:opacity-100 p-1.5 hover:bg-red-50 text-gray-400 hover:text-red-700 rounded-lg transition-all">
+                                                <i data-lucide="trash-2" class="w-3 h-3"></i>
+                                            </button>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        function dashboardApp() {
+            return {
+                showSchedule: false,
+                showAlerts: false,
+                isScheduling: false,
+                scheduleItems: JSON.parse('{{ schedule_items_json|safe }}'),
+                newSchedule: { day: '', time: '', activity: '', color: 'blue' },
+                stats: [
+                    { label: 'Documents', value: '{{ docs_count }}', change: '+3 this week', icon: 'file-text', emoji: '📄', color: '#8C1007', bgColor: '#FEF2F2' },
+                    { label: 'Tasks Done', value: '{{ completed_count }}/{{ total_tasks }}', change: '{{ completion_rate }}% complete', icon: 'check-square', emoji: '✅', color: '#10B981', bgColor: '#D1FAE5' },
+                    { label: 'Study Hours', value: '{{ study_hours }}h', change: '+8h this week', icon: 'clock', emoji: '⏰', color: '#F59E0B', bgColor: '#FEF3C7' },
+                    { label: 'Progress', value: '{{ completion_rate }}%', change: 'Keep it up!', icon: 'trending-up', emoji: '📈', color: '#8B5CF6', bgColor: '#EDE9FE' },
+                ],
+                periodData: [
+                    { name: 'Prelims', value: 90, color: '#8C1007', tasks: '12/15', icon: '📝' },
+                    { name: 'Midterms', value: 67, color: '#660B05', tasks: '8/12', icon: '📚' },
+                    { name: 'Finals', value: 33, color: '#B91C1C', tasks: '5/15', icon: '🎓' },
+                ],
+                achievements: [
+                    { title: '7-Day Streak', emoji: '🔥', unlocked: true, progress: 100 },
+                    { title: 'Early Bird', emoji: '🐦', unlocked: true, progress: 100 },
+                    { title: 'Task Master', emoji: '🏆', unlocked: false, progress: {{ completion_rate|floatformat:0 }} },
+                    { title: 'Speed Reader', emoji: '⚡', unlocked: false, progress: 45 },
+                ],
+                upcomingTasks: JSON.parse('{{ upcoming_tasks_json|safe }}'),
+                recentActivity: [
+                    { title: 'Introduction to Algorithms.pdf', type: 'Summarized', time: '2 hours ago', emoji: '🤖', period: 'Midterms' },
+                    { title: 'Study for Database Quiz', type: 'Completed', time: '5 hours ago', emoji: '✅', period: 'Prelims' },
+                    { title: 'Data Structures Lecture.pptx', type: 'Summarized', time: '1 day ago', emoji: '📊', period: 'Midterms' },
+                    { title: 'Review Chapter 5', type: 'Started', time: '1 day ago', emoji: '📖', period: 'Finals' },
+                ],
+                async saveSchedule() {
+                    if (this.newSchedule.day && this.newSchedule.time && this.newSchedule.activity) {
+                        try {
+                            const response = await fetch('/tasks/schedule/add/', {
+                                method: 'POST',
+                                headers: {
+                                    'X-CSRFToken': '{{ csrf_token }}',
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify(this.newSchedule)
+                            });
+                            const data = await response.json();
+                            if (data.status === 'success') {
+                                this.scheduleItems.push(data.item);
+                                this.newSchedule = { day: '', time: '', activity: '', color: 'blue' };
+                                this.isScheduling = false;
+                                this.$nextTick(() => lucide.createIcons());
+                            }
+                        } catch (error) {
+                            console.error('Error saving schedule:', error);
+                        }
+                    }
+                },
+                async deleteSchedule(id) {
+                    try {
+                        const response = await fetch(`/tasks/schedule/delete/${id}/`, {
+                            method: 'POST',
+                            headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+                        });
+                        const data = await response.json();
+                        if (data.status === 'success') {
+                            this.scheduleItems = this.scheduleItems.filter(i => i.id !== id);
+                        }
+                    } catch (error) {
+                        console.error('Error deleting schedule:', error);
+                    }
+                },
+                getDayColor(color) {
+                    const colors = {
+                        blue: '#3B82F6',
+                        green: '#10B981',
+                        orange: '#F59E0B',
+                        red: '#EF4444',
+                        purple: '#8B5CF6'
+                    };
+                    return colors[color] || colors.blue;
+                },
+                getPriorityStyle(priority) {
+                    switch (priority) {
+                        case 'High': return { bg: '#FEE2E2', text: '#991B1B', border: '#FCA5A5' };
+                        case 'Medium': return { bg: '#FEF3C7', text: '#92400E', border: '#FCD34D' };
+                        case 'Low': return { bg: '#DBEAFE', text: '#1E40AF', border: '#93C5FD' };
+                        default: return { bg: '#F3F4F6', text: '#4B5563', border: '#D1D5DB' };
+                    }
+                },
+                initCharts() {
+                    this.$nextTick(() => {
+                        if(window.lucide) { lucide.createIcons(); }
+
+                        Chart.defaults.font.family = "'Inter', sans-serif";
+                        
+                        const ctx = document.getElementById('weeklyChart').getContext('2d');
+                        
+                        // Create Gradient
+                        const gradient = ctx.createLinearGradient(0, 0, 0, 240);
+                        gradient.addColorStop(0, '#8C1007');
+                        gradient.addColorStop(1, '#DC2626c8');
+                        
+                        new Chart(ctx, {
+                            type: 'bar',
+                            data: {
+                                labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                                datasets: [
+                                    {
+                                        label: 'Study Hours',
+                                        data: [6, 5, 8, 7, 6, 5, 5],
+                                        backgroundColor: gradient,
+                                        borderRadius: 8
+                                    },
+                                    {
+                                        label: 'Goal',
+                                        data: [7, 7, 7, 7, 7, 7, 7],
+                                        backgroundColor: '#f3f4f6',
+                                        borderRadius: 8
+                                    }
+                                ]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                scales: {
+                                    x: { grid: { display: false } },
+                                    y: { grid: { display: false }, beginAtZero: true }
+                                }
+                            }
+                        })
+                    })
+                }
+            }
+        }
+        
+        document.addEventListener("DOMContentLoaded", function() {
+            if(window.lucide) { lucide.createIcons(); }
+        });
+    </script>
+</body>
+</html>
