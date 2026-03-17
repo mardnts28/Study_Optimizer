@@ -8,8 +8,14 @@ from django.views.decorators.http import require_POST
 from django.http import JsonResponse
 from django.db.models import Sum, Count
 import json
-from .models import Task, SharedMaterial, Comment, SummarizedDocument, ScheduleItem
+import re
+import io
+import PyPDF2
+import docx
+from pptx import Presentation
+from collections import Counter
 from datetime import date, timedelta
+from .models import Task, SharedMaterial, Comment, SummarizedDocument, ScheduleItem
 
 @csrf_protect
 def index(request):
@@ -352,27 +358,36 @@ def summarize_doc(request):
         
         # Text Extraction per File Type
         if file_name.lower().endswith('.pdf'):
-            import PyPDF2
-            reader = PyPDF2.PdfReader(uploaded_file)
-            for page in reader.pages[:15]: # Increased page limit
-                text = page.extract_text()
-                if text: content += text + " "
+            try:
+                reader = PyPDF2.PdfReader(uploaded_file)
+                for page in reader.pages[:20]: 
+                    text = page.extract_text()
+                    if text: content += text + " "
+            except Exception as e:
+                return JsonResponse({'status': 'error', 'message': f'Error reading PDF: {str(e)}'}, status=400)
         
         elif file_name.lower().endswith('.docx'):
-            import docx
-            doc = docx.Document(uploaded_file)
-            content = " ".join([p.text for p in doc.paragraphs[:50]]) # Limit paragraphs
+            try:
+                doc = docx.Document(uploaded_file)
+                content = " ".join([p.text for p in doc.paragraphs[:100]])
+            except Exception as e:
+                return JsonResponse({'status': 'error', 'message': f'Error reading Word doc: {str(e)}'}, status=400)
             
         elif file_name.lower().endswith('.pptx'):
-            from pptx import Presentation
-            prs = Presentation(uploaded_file)
-            for slide in prs.slides[:20]:
-                for shape in slide.shapes:
-                    if hasattr(shape, "text") and shape.text:
-                        content = content + str(shape.text) + " "
+            try:
+                prs = Presentation(uploaded_file)
+                for slide in prs.slides[:30]:
+                    for shape in slide.shapes:
+                        if hasattr(shape, "text") and shape.text:
+                            content = content + str(shape.text) + " "
+            except Exception as e:
+                return JsonResponse({'status': 'error', 'message': f'Error reading PowerPoint: {str(e)}'}, status=400)
                         
         elif file_name.lower().endswith('.txt'):
-            content = uploaded_file.read().decode('utf-8')
+            try:
+                content = uploaded_file.read().decode('utf-8', errors='ignore')
+            except Exception as e:
+                return JsonResponse({'status': 'error', 'message': f'Error reading text file: {str(e)}'}, status=400)
         else:
             return JsonResponse({'status': 'error', 'message': 'Unsupported file type. Please use PDF, DOCX, PPTX, or TXT.'}, status=400)
 
@@ -380,21 +395,12 @@ def summarize_doc(request):
             return JsonResponse({'status': 'error', 'message': 'Could not extract text from document'}, status=400)
 
         # ---------------------------------------------------------
-        # AI Summarization Logic (Refined)
+        # AI Summarization Logic (Extractive)
         # ---------------------------------------------------------
-        import re
-        from collections import Counter
-
-        # Cleanup and tokenize
         content_clean = re.sub(r'\s+', ' ', content).strip()
         raw_sents = re.split(r'(?<=[.!?])\s+', content_clean)
-        sentences = []
-        for s in raw_sents:
-            s_clean = s.strip()
-            if len(s_clean) > 10:
-                sentences.append(s_clean)
+        sentences = [s.strip() for s in raw_sents if len(s.strip()) > 10]
         
-        # Frequency analysis (Standard dict for linter stability)
         words = re.findall(r'\w+', content_clean.lower())
         stopwords = set(['the', 'and', 'is', 'in', 'to', 'of', 'a', 'that', 'it', 'for', 'on', 'with', 'as', 'this', 'was', 'at', 'by', 'an', 'be', 'are', 'which', 'from', 'or', 'their', 'we', 'your', 'has', 'have', 'were', 'not', 'can', 'will', 'but', 'all', 'they', 'he', 'she', 'his', 'her', 'who', 'about', 'some', 'more', 'so', 'one', 'out', 'up', 'down', 'into', 'over', 'after', 'before', 'then', 'once', 'just', 'only', 'than', 'them', 'if', 'there', 'when', 'any', 'each', 'other', 'been', 'would', 'could', 'should'])
         
@@ -403,108 +409,29 @@ def summarize_doc(request):
             if w not in stopwords and len(w) > 3:
                 freq_dict[w] = freq_dict.get(w, 0) + 1
         
-        # Technical-Aware Scoring
         score_map = {}
-        tech_keys = ['config', 'setup', 'policy', 'cli', 'network', 'vpn', 'iam', 's3', 'aws', 'router', 'switch', 'encryption', 'secure']
-        for i in range(len(sentences)):
-            sent = sentences[i]
-            s_lower = sent.lower()
-            s_words = re.findall(r'\w+', s_lower)
-            
-            val = 0.0
-            for sw in s_words:
-                val += float(freq_dict.get(sw, 0))
-            
-            t_weight = 1.0
-            if any(tk in s_lower for tk in tech_keys): t_weight *= 1.5
-            if re.search(r'\d+\.\d+\.\d+\.\d+', sent): t_weight *= 2.0
-            if re.search(r'[A-Za-z0-9_-]+/[A-Za-z0-9_-]+', sent): t_weight *= 1.2
-            
-            total_val = val * t_weight
+        for i, sent in enumerate(sentences):
+            s_words = re.findall(r'\w+', sent.lower())
+            val = sum(freq_dict.get(sw, 0) for sw in s_words)
             if len(s_words) > 5:
-                score_map[i] = total_val / (float(len(s_words)) ** 0.5)        # Extraction logic
-        map_keys = list(score_map.keys())
-        top_indices = sorted(map_keys, key=lambda x: score_map[x], reverse=True)
-        if len(top_indices) > 10:
-            top_indices = top_indices[:10]
+                score_map[i] = val / (len(s_words) ** 0.5)
+
+        top_indices = sorted(score_map.keys(), key=lambda x: score_map[x], reverse=True)[:10]
         top_indices.sort()
-        
-        relevant_sentences = []
-        for idx in top_indices:
-            relevant_sentences.append(sentences[idx])
+        relevant_sentences = [sentences[idx] for idx in top_indices]
 
-        # Technical Synthesis Workflow 
-        sorted_freq = sorted(freq_dict.items(), key=lambda x: x[1], reverse=True)
-        top_context_words = []
-        for wf in sorted_freq:
-            if len(wf[0]) > 4:
-                top_context_words.append(str(wf[0]).capitalize())
-            if len(top_context_words) >= 2: break
+        title_line = f"📘 {file_name} – Technical Overview"
+        highlights = [f"✅ {s}" for s in relevant_sentences[:4]]
+        overview_text = relevant_sentences[0] if relevant_sentences else "No significant content found."
+        detail_lines = [f"• {s}" for s in relevant_sentences[1:6]]
+        key_details_text = "\n".join(detail_lines)
         
-        tech_context = " & ".join(top_context_words) if top_context_words else "Infrastructure"
-        title_line = f"📘 {tech_context} – Technical Infrastructure Overview"
-
-        # Executive Highlights
-        highlights = []
-        icons = ["✅", "⚠️", "🚧", "💡"]
-        action_keywords = ['configure', 'assigned', 'verified', 'created', 'enabled', 'tested', 'implemented', 'policy']
-        
-        high_pool = []
-        for s in relevant_sentences:
-            if any(ak in s.lower() for ak in action_keywords):
-                high_pool.append(s)
-        for s in relevant_sentences:
-            if s not in high_pool:
-                high_pool.append(s)
-        
-        num_highlights = min(4, len(high_pool))
-        for i in range(num_highlights):
-            highlights.append(f"{icons[i]} {high_pool[i]}")
-
-        # Breakdown Sections
-        if len(relevant_sentences) > 0:
-            overview_text = relevant_sentences[0]
-        else:
-            overview_text = "Technical configuration analysis."
-            
-        tech_facts = []
-        for s in relevant_sentences:
-            if re.search(r'\d', s):
-                tech_facts.append(s)
-        
-        # Key Details 
-        detail_pool = []
-        if len(tech_facts) > 0:
-            detail_pool = tech_facts
-        elif len(relevant_sentences) > 1:
-            for i in range(1, min(6, len(relevant_sentences))):
-                detail_pool.append(relevant_sentences[i])
-        
-        detail_lines = []
-        for ds in detail_pool:
-            detail_lines.append(f"• {ds}")
-        
-        key_details_text = "\n".join(detail_lines) if detail_lines else "• Verified system integrity parameters."
-        
-        # Implications based on content flags
-        c_low = content_clean.lower()
-        if "vpn" in c_low or "ips" in c_low:
-            next_step = "Practice tunnel verification and encryption protocol analysis to ensure network-level isolation."
-        elif "iam" in c_low or "policy" in c_low:
-            next_step = "Review least-privilege principles and audit user permission boundaries to prevent privilege escalation."
-        else:
-            next_step = f"Deepen understanding of {tech_context} configurations to optimize system security and performance."
-
-        takeaway_line = f"🎯 Takeaway: Mastering these {tech_context} configurations builds a professional foundation for your success."
-
-        # Final Formatting (Sponsor-Ready Synthesis)
         final_summary = f"{title_line}\n\n"
         final_summary += "🔑 Executive Highlights\n" + "\n".join(highlights) + "\n\n"
         final_summary += "📂 Three-Part Breakdown\n"
         final_summary += f"Overview: {overview_text}\n\n"
         final_summary += f"Key Details:\n{key_details_text}\n\n"
-        final_summary += f"Implications / Next Steps: {next_step}\n\n"
-        final_summary += takeaway_line
+        final_summary += "🎯 Takeaway: Reviewing these key points will strengthen your understanding."
 
         # Save to DB
         doc = SummarizedDocument.objects.create(

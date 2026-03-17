@@ -197,9 +197,7 @@
     </div>
 
     <!-- Data Bridges -->
-    <script id="recent-summaries-json" type="application/json">
-        {{ recent_summaries_json|safe }}
-    </script>
+    {{ recent_summaries_json|json_script:"recent-summaries-json" }}
 
     <script>
         function uploadApp() {
@@ -235,13 +233,27 @@
                 },
 
                 processSelectedFiles(fileList) {
-                    const newFiles = Array.from(fileList).map(f => ({
+                    const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+                    const newFiles = Array.from(fileList).filter(f => {
+                        // Check if file is already in selectedFiles
+                        const isDuplicate = this.selectedFiles.some(existing => 
+                            existing.name === f.name && existing.size === f.size
+                        );
+                        if (isDuplicate) return false;
+
+                        // Check size
+                        if (f.size > MAX_SIZE) {
+                            this.errorMessage = `File "${f.name}" is too large (max 10MB)`;
+                            return false;
+                        }
+                        return true;
+                    }).map(f => ({
                         name: f.name,
                         size: f.size,
                         raw: f
-                    })).slice(0, 10);
+                    }));
+
                     this.selectedFiles = [...this.selectedFiles, ...newFiles].slice(0, 10);
-                    // Scroll to see added files if many
                 },
 
                 removeFile(index) {
