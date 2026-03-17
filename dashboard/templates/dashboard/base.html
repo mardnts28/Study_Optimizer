@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Study Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: '#8C1007',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .progress-bar { transition: width 1s ease-in-out; }
+    </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-white via-red-50/20 to-orange-50/20">
+
+    <!-- Navigation -->
+    <nav class="bg-white border-b-2 border-gray-100 shadow-sm sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+            <a href="{% url 'dashboard' %}" class="text-xl font-bold" style="color: #8C1007">
+                📚 StudyOptimizer
+            </a>
+            <div class="flex items-center gap-4">
+                <a href="{% url 'dashboard' %}" class="text-sm font-semibold text-gray-700 hover:text-red-700">Dashboard</a>
+                <a href="#" class="text-sm font-semibold text-gray-700 hover:text-red-700">Tasks</a>
+                <a href="{% url 'upload' %}" class="text-sm font-semibold text-gray-700 hover:text-red-700">Upload</a>
+                <a href="#" class="text-sm font-semibold text-gray-700 hover:text-red-700">Progress</a>
+
+                <!-- Alerts Dropdown -->
+                <div class="relative">
+                    <button onclick="toggleAlerts()"
+                            class="text-sm font-semibold text-gray-700 hover:text-red-700 flex items-center gap-1">
+                        🔔 Alerts
+                        <span class="w-4 h-4 bg-red-500 rounded-full text-xs text-white flex items-center justify-center">3</span>
+                    </button>
+
+                    <!-- Dropdown Panel -->
+                    <div id="alerts-dropdown"
+                         class="hidden absolute right-0 top-10 w-80 bg-white rounded-2xl shadow-2xl border-2 border-gray-100 z-50">
+
+                        <!-- Header -->
+                        <div class="p-4 border-b-2 border-gray-100 flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <span class="font-bold text-gray-900">🔔 Alerts</span>
+                                <span class="px-2 py-0.5 bg-red-500 text-white text-xs font-bold rounded-full">3</span>
+                            </div>
+                            <button onclick="toggleAlerts()"
+                                    class="p-1 hover:bg-gray-100 rounded-lg transition-colors text-gray-500 text-sm">
+                                ✕
+                            </button>
+                        </div>
+
+                        <!-- Alert Items -->
+                        <div class="p-3 space-y-3">
+                            <div class="p-4 bg-red-50 border-2 border-red-200 rounded-xl">
+                                <div class="flex items-start gap-3">
+                                    <span class="text-2xl">⚠️</span>
+                                    <div>
+                                        <div class="font-bold text-sm text-red-900">Database Final Exam</div>
+                                        <div class="text-xs text-red-700 mt-0.5">Due in 3 days — Mar 8</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="p-4 bg-yellow-50 border-2 border-yellow-200 rounded-xl">
+                                <div class="flex items-start gap-3">
+                                    <span class="text-2xl">📝</span>
+                                    <div>
+                                        <div class="font-bold text-sm text-yellow-900">Algorithm Assignment</div>
+                                        <div class="text-xs text-yellow-700 mt-0.5">Due in 5 days — Mar 10</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="p-4 bg-green-50 border-2 border-green-200 rounded-xl">
+                                <div class="flex items-start gap-3">
+                                    <span class="text-2xl">🎉</span>
+                                    <div>
+                                        <div class="font-bold text-sm text-green-900">Great Progress!</div>
+                                        <div class="text-xs text-green-700 mt-0.5">You've completed 72% of your tasks</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- End Alerts Dropdown -->
+
+            </div>
+        </div>
+    </nav>
+
+    <!-- Page Content -->
+    <main class="max-w-7xl mx-auto px-6 py-8">
+        {% block content %}{% endblock %}
+    </main>
+
+    <script>
+        function toggleAlerts() {
+            const dropdown = document.getElementById('alerts-dropdown');
+            dropdown.classList.toggle('hidden');
+        }
+
+        // Close when clicking outside
+        document.addEventListener('click', function(e) {
+            const dropdown = document.getElementById('alerts-dropdown');
+            const btn = e.target.closest('button[onclick="toggleAlerts()"]');
+            if (!btn && !dropdown.contains(e.target)) {
+                dropdown.classList.add('hidden');
+            }
+        });
+    </script>
+
+</body>
+</html>
