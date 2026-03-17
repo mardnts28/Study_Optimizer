@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -12,9 +13,7 @@
         <!-- Logo Section -->
         <div class="text-center mb-10">
             <a class="inline-flex items-center gap-3 mb-6 group" href="/">
-                <div class="w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg transition-transform group-hover:scale-110" style="background: linear-gradient(135deg, #8C1007 0%, #DC2626 100%)">
-                    <i data-lucide="book-open" class="w-7 h-7 text-white"></i>
-                </div>
+                <img src="{% static 'main/images/logo.png' %}" alt="Logo" class="w-16 h-16 object-contain transition-transform group-hover:scale-110">
                 <span class="text-2xl font-bold text-gray-900 tracking-tight">StudyOptimizer</span>
             </a>
             <h1 class="text-4xl font-extrabold text-gray-900 mb-2">Welcome back! 👋</h1>

@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -11,9 +12,7 @@
     <nav class="sticky top-0 z-50 bg-white border-b border-gray-100">
         <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
             <a href="/dashboard/" class="flex items-center gap-2">
-                <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background-color: #8C1007;">
-                    <i data-lucide="book-open" class="w-5 h-5 text-white"></i>
-                </div>
+                <img src="{% static 'main/images/logo.png' %}" alt="Logo" class="w-10 h-10 object-contain">
                 <span class="font-bold text-gray-900">StudyOptimizer</span>
             </a>
             <div class="flex items-center gap-6 text-sm font-medium text-gray-500">
@@ -90,12 +89,6 @@
                             <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"></i>
                             <input x-model="searchQuery" type="text" placeholder="Search summaries..." class="w-full pl-9 pr-4 py-2 rounded-lg border-2 border-gray-200 focus:border-red-200 focus:outline-none">
                         </div>
-                        <select x-model="filterPeriod" class="border-2 border-gray-200 rounded-lg px-3 py-2 w-36 focus:outline-none focus:border-red-200 bg-white">
-                            <option value="all">All Periods</option>
-                            <option value="Prelims">📝 Prelims</option>
-                            <option value="Midterms">📚 Midterms</option>
-                            <option value="Finals">🎓 Finals</option>
-                        </select>
                     </div>
                 </div>
 
@@ -125,7 +118,6 @@
                                             </span>
                                         </div>
                                     </div>
-                                    <span class="text-xs px-2 py-1 rounded-full font-semibold flex-shrink-0" style="background-color: #FEF2F2; color: #8C1007" x-text="summary.period"></span>
                                 </div>
                                 <!-- Title -->
                                 <div class="flex items-center gap-2 mb-2">
@@ -273,19 +265,10 @@
                         <input x-model="shareForm.subject" type="text" placeholder="e.g. Computer Science, Mathematics" class="w-full border-2 border-gray-200 rounded-lg p-2 focus:border-red-300 focus:outline-none">
                     </div>
                     <div>
-                        <label class="block font-semibold text-sm mb-1">Academic Period</label>
-                        <select x-model="shareForm.period" class="w-full border-2 border-gray-200 rounded-lg p-2 focus:border-red-300 focus:outline-none bg-white">
-                            <option value="">Select period</option>
-                            <option value="Prelims">📝 Prelims</option>
-                            <option value="Midterms">📚 Midterms</option>
-                            <option value="Finals">🎓 Finals</option>
-                        </select>
-                    </div>
-                    <div>
                         <label class="block font-semibold text-sm mb-1">Summary Content / Preview</label>
                         <textarea x-model="shareForm.preview" placeholder="Paste your summary here to share with classmates..." rows="5" class="w-full border-2 border-gray-200 rounded-lg p-3 text-sm resize-none focus:outline-none focus:border-red-300 transition-colors"></textarea>
                     </div>
-                    <button @click="handleShare()" :disabled="!shareForm.title || !shareForm.subject || !shareForm.period || !shareForm.preview" class="w-full py-3 bg-red-700 hover:bg-red-800 disabled:bg-gray-300 text-white rounded-lg font-semibold shadow-lg transition-colors flex items-center justify-center gap-2">
+                    <button @click="handleShare()" :disabled="!shareForm.title || !shareForm.subject || !shareForm.preview" class="w-full py-3 bg-red-700 hover:bg-red-800 disabled:bg-gray-300 text-white rounded-lg font-semibold shadow-lg transition-colors flex items-center justify-center gap-2">
                         <i data-lucide="sparkles" class="w-4 h-4"></i>
                         Share with Community 🚀
                     </button>
@@ -365,7 +348,7 @@
                 searchQuery: '',
                 filterPeriod: 'all',
                 isShareDialogOpen: false,
-                shareForm: { title: '', subject: '', period: '', preview: '' },
+                shareForm: { title: '', subject: '', period: 'General', preview: '' },
                 activeTab: 'community',
                 commentModal: { isOpen: false, summaryId: null },
                 newComment: '',
@@ -415,7 +398,7 @@
                 },
                 
                 async handleShare() {
-                    if (this.shareForm.title && this.shareForm.subject && this.shareForm.period && this.shareForm.preview) {
+                    if (this.shareForm.title && this.shareForm.subject && this.shareForm.preview) {
                         try {
                             const response = await fetch('/collaborate/share/', {
                                 method: 'POST',

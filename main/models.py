@@ -8,6 +8,7 @@ class Task(models.Model):
         ('High', 'High'),
     ]
     PERIOD_CHOICES = [
+        ('General', 'General'),
         ('Prelims', 'Prelims'),
         ('Midterms', 'Midterms'),
         ('Finals', 'Finals'),
@@ -15,7 +16,8 @@ class Task(models.Model):
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='tasks')
     title = models.CharField(max_length=255)
-    period = models.CharField(max_length=20, choices=PERIOD_CHOICES)
+    subject = models.CharField(max_length=100, default='General')
+    period = models.CharField(max_length=20, choices=PERIOD_CHOICES, default='General')
     priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES)
     due_date = models.DateField()
     completed = models.BooleanField(default=False)
@@ -29,6 +31,7 @@ class Task(models.Model):
 
 class SharedMaterial(models.Model):
     PERIOD_CHOICES = [
+        ('General', 'General'),
         ('Prelims', 'Prelims'),
         ('Midterms', 'Midterms'),
         ('Finals', 'Finals'),
@@ -37,7 +40,7 @@ class SharedMaterial(models.Model):
     author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='shared_materials')
     title = models.CharField(max_length=255)
     subject = models.CharField(max_length=100)
-    period = models.CharField(max_length=20, choices=PERIOD_CHOICES)
+    period = models.CharField(max_length=20, choices=PERIOD_CHOICES, default='General')
     content = models.TextField()
     likes = models.ManyToManyField(User, related_name='liked_materials', blank=True)
     views = models.IntegerField(default=0)
@@ -63,7 +66,8 @@ class Comment(models.Model):
 class SummarizedDocument(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='summaries')
     file_name = models.CharField(max_length=255)
-    period = models.CharField(max_length=20)
+    period = models.CharField(max_length=20, default='General')
+    subject = models.CharField(max_length=100, default='General')
     summary_text = models.TextField()
     emoji = models.CharField(max_length=10, default='📄')
     created_at = models.DateTimeField(auto_now_add=True)

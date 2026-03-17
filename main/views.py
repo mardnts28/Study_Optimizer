@@ -93,7 +93,7 @@ def collaborate(request):
             'timeAgo': 'Just now',
             'emoji': m.emoji,
             'liked': m.likes.filter(id=request.user.id).exists(),
-            'tags': [m.subject, m.period]
+            'tags': [m.subject]
         })
     
     active_students_count = User.objects.count()
@@ -134,7 +134,7 @@ def share_material(request):
                 'timeAgo': 'Just now',
                 'emoji': material.emoji,
                 'liked': False,
-                'tags': [material.subject, material.period]
+                'tags': [material.subject]
             }
         })
     except Exception as e:
@@ -205,9 +205,23 @@ def dashboard(request):
             'title': t.title,
             'date': t.due_date.strftime('%b %d'),
             'priority': t.priority,
-            'period': t.period,
+            'period': 'General',
             'daysLeft': days_left if days_left >= 0 else 0
         })
+
+    # General task progress instead of period breakdown
+    total_active = active_tasks.count()
+    completed_today = user_tasks.filter(completed=True, created_at__date=date.today()).count()
+
+    # Weekly Study Hours (Mon-Sun)
+    today = date.today()
+    start_of_week = today - timedelta(days=today.weekday())
+    daily_hours = []
+    for i in range(7):
+        day = start_of_week + timedelta(days=i)
+        tasks_on_day = user_tasks.filter(completed=True, created_at__date=day).count()
+        summaries_on_day = SummarizedDocument.objects.filter(user=request.user, created_at__date=day).count()
+        daily_hours.append((tasks_on_day * 2) + (summaries_on_day * 1))
 
     context = {
         'total_tasks': total_tasks,
@@ -215,7 +229,8 @@ def dashboard(request):
         'completion_rate': completion_rate,
         'upcoming_tasks_json': json.dumps(upcoming_tasks_list),
         'docs_count': SharedMaterial.objects.filter(author=request.user).count() + SummarizedDocument.objects.filter(user=request.user).count(),
-        'study_hours': 148, # Placeholder
+        'study_hours': (completed_tasks * 2) + (SummarizedDocument.objects.filter(user=request.user).count() * 1),
+        'weekly_hours_list': json.dumps(daily_hours),
         'schedule_items_json': json.dumps([{
             'id': item.id,
             'day': item.day,
@@ -232,25 +247,73 @@ def progress(request):
     user_tasks = Task.objects.filter(user=request.user)
     total_tasks = user_tasks.count()
     completed_tasks = user_tasks.filter(completed=True).count()
+    summaries = SummarizedDocument.objects.filter(user=request.user)
     
-    # Task distribution by period
-    periods = ['Prelims', 'Midterms', 'Finals']
-    period_stats = []
-    for p in periods:
-        period_tasks = user_tasks.filter(period=p)
-        period_stats.append({
-            'period': p,
-            'completed': period_tasks.filter(completed=True).count(),
-            'total': period_tasks.count()
-        })
+    # Calculate Streak
+    activity_dates = set()
+    # Note: Using created_at as completion date proxy if no explicit completion timestamp exists
+    for t in user_tasks.filter(completed=True):
+        activity_dates.add(t.created_at.date())
+    for s in summaries:
+        activity_dates.add(s.created_at.date())
+    
+    sorted_dates = sorted(list(activity_dates), reverse=True)
+    streak = 0
+    today = date.today()
+    
+    if sorted_dates:
+        # Check if the streak is still alive (active today or yesterday)
+        if sorted_dates[0] == today or sorted_dates[0] == today - timedelta(days=1):
+            current_date = sorted_dates[0]
+            streak = 1
+            for i in range(1, len(sorted_dates)):
+                if sorted_dates[i] == current_date - timedelta(days=1):
+                    streak += 1
+                    current_date = sorted_dates[i]
+                else:
+                    break
+    
+    # Estimate Study Hours: 2h per completed task, 1h per summary
+    study_hours_total = (completed_tasks * 2) + (summaries.count() * 1)
+    
+    # Subject distribution
+    subjects = {}
+    for t in user_tasks:
+        sub = t.subject if t.subject else 'General'
+        subjects[sub] = subjects.get(sub, 0) + 1
+    for s in summaries:
+        sub = s.subject if s.subject else 'General'
+        subjects[sub] = subjects.get(sub, 0) + 1
+    
+    subject_labels = list(subjects.keys())
+    subject_data = list(subjects.values())
+
+    # Weekly hours (last 4 weeks as requested by chart labels 'Week 1-4' originally, 
+    # but let's do last 4 segments of activity)
+    # Actually the chart has labels 'Week 1', 'Week 2', 'Week 3', 'Week 4'
+    weekly_trend = []
+    for i in range(3, -1, -1):
+        start_date = today - timedelta(days=(i+1)*7)
+        end_date = today - timedelta(days=i*7)
+        tasks_in_week = user_tasks.filter(completed=True, created_at__range=(start_date, end_date)).count()
+        sums_in_week = summaries.filter(created_at__range=(start_date, end_date)).count()
+        weekly_trend.append((tasks_in_week * 2) + sums_in_week)
+
+    period_stats = [
+        {'period': 'General Progress', 'completed': completed_tasks, 'total': total_tasks}
+    ]
     
     context = {
         'total_tasks': total_tasks,
         'completed_count': completed_tasks,
         'completion_rate': round((completed_tasks / total_tasks * 100), 1) if total_tasks > 0 else 0,
+        'streak': streak,
+        'study_hours': study_hours_total,
+        'summaries_count': summaries.count(),
         'period_stats_json': json.dumps(period_stats),
-        'study_hours': 148,
-        'streak': 7,
+        'subject_labels_json': json.dumps(subject_labels),
+        'subject_data_json': json.dumps(subject_data),
+        'weekly_hours_json': json.dumps(weekly_trend),
     }
     return render(request, "main/progress.html", context)
 
@@ -263,7 +326,7 @@ def upload(request):
         summaries_list.append({
             'id': s.id,
             'title': s.file_name,
-            'period': s.get_period_display() if hasattr(s, 'get_period_display') else s.period.capitalize(),
+            'period': 'General',
             'date': s.created_at.strftime('%b %d'),
             'emoji': s.emoji,
             'summary': s.summary_text
@@ -283,7 +346,7 @@ def summarize_doc(request):
             return JsonResponse({'status': 'error', 'message': 'No file uploaded'}, status=400)
         
         uploaded_file = request.FILES['file']
-        period = request.POST.get('period', 'General')
+        period = 'General'
         file_name = uploaded_file.name
         content = ""
         
@@ -432,7 +495,7 @@ def summarize_doc(request):
         else:
             next_step = f"Deepen understanding of {tech_context} configurations to optimize system security and performance."
 
-        takeaway_line = f"🎯 Takeaway: Mastering these {tech_context} configurations builds a professional foundation for your {period.capitalize()} success."
+        takeaway_line = f"🎯 Takeaway: Mastering these {tech_context} configurations builds a professional foundation for your success."
 
         # Final Formatting (Sponsor-Ready Synthesis)
         final_summary = f"{title_line}\n\n"
@@ -467,7 +530,7 @@ def summarize_batch(request):
     try:
         data = json.loads(request.body)
         doc_ids = data.get('doc_ids', [])
-        period = data.get('period', 'General')
+        period = 'General'
         
         if not doc_ids:
             return JsonResponse({'status': 'error', 'message': 'No documents provided for batch processing'}, status=400)
@@ -498,7 +561,7 @@ def summarize_batch(request):
             batch_output += f"🔄 Strategic Focus:\n"
             batch_output += f"The combined resources provide a comprehensive framework for {category_context}. They establish detailed standards for deployment, auditing, and optimization, ensuring that every configuration step is backed by technical best practices.\n\n"
         
-        final_sponsor = f"🎯 Final Sponsor Takeaway: This curated set establishes the exact critical competencies required for modern {period.capitalize()} professional excellence. Mastering these overlapping themes bridges the gap between individual configurations and strategic infrastructure management."
+        final_sponsor = f"🎯 Final Sponsor Takeaway: This curated set establishes the exact critical competencies required for modern professional excellence. Mastering these overlapping themes bridges the gap between individual configurations and strategic infrastructure management."
 
         batch_output += final_sponsor
         
@@ -559,7 +622,7 @@ def edit_task(request, task_id):
         task = get_object_or_404(Task, id=task_id, user=request.user)
         data = json.loads(request.body)
         task.title = data.get('title', task.title)
-        task.period = data.get('period', task.period)
+        task.period = 'General'
         task.priority = data.get('priority', task.priority)
         task.due_date = data.get('dueDate', task.due_date)
         task.save()
@@ -594,8 +657,30 @@ def delete_task(request, task_id):
 
 @login_required
 @csrf_protect
+@login_required
+@csrf_protect
 def profile(request):
-    return render(request, "main/profile.html")
+    user_tasks = Task.objects.filter(user=request.user)
+    total_tasks = user_tasks.count()
+    completed_tasks = user_tasks.filter(completed=True).count()
+    completion_rate = round((completed_tasks / total_tasks * 100), 1) if total_tasks > 0 else 0
+    summaries_count = SummarizedDocument.objects.filter(user=request.user).count()
+    study_hours = (completed_tasks * 2) + (summaries_count * 1)
+    
+    # Calculate Level: 1 level every 5 completed tasks
+    user_level = (completed_tasks // 5) + 1
+    next_level_progress = int(((completed_tasks % 5) / 5) * 100)
+
+    context = {
+        'user_level': user_level,
+        'next_level_progress': next_level_progress,
+        'docs_count': summaries_count,
+        'completed_count': completed_tasks,
+        'total_tasks': total_tasks,
+        'completion_rate': completion_rate,
+        'study_hours': study_hours,
+    }
+    return render(request, "main/profile.html", context)
 
 @login_required
 @require_POST

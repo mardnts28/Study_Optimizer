@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -5,6 +6,7 @@
     <title>Task Manager - StudyOptimizer</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="icon" type="image/png" href="{% static 'main/images/logo.png' %}">
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
 <body class="bg-gradient-to-br from-white via-orange-50/20 to-white min-h-screen">
@@ -12,9 +14,7 @@
     <nav class="sticky top-0 z-50 bg-white border-b border-gray-100">
         <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
             <a href="/dashboard/" class="flex items-center gap-2">
-                <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background-color: #8C1007;">
-                    <i data-lucide="book-open" class="w-5 h-5 text-white"></i>
-                </div>
+                <img src="{% static 'main/images/logo.png' %}" alt="Logo" class="w-10 h-10 object-contain">
                 <span class="font-bold text-gray-900">StudyOptimizer</span>
             </a>
             <div class="flex items-center gap-6 text-sm font-medium text-gray-500">
@@ -107,8 +107,7 @@
                         <div class="flex-1">
                             <div class="font-semibold text-gray-900 mb-2" :class="task.completed ? 'line-through' : ''" x-text="task.title"></div>
                             <div class="flex items-center gap-2 flex-wrap text-xs">
-                                <span class="text-lg" x-text="getPeriodEmoji(task.period)"></span>
-                                <span class="px-3 py-1 bg-gray-100 text-gray-700 rounded-full font-medium border border-gray-200" x-text="task.period"></span>
+                                <!-- Period removed -->
                                 <span class="px-3 py-1 rounded-full font-semibold border-2" 
                                       :style="getPriorityStyle(task.priority)" 
                                       x-text="task.priority"></span>
@@ -144,15 +143,6 @@
                         <input x-model="newTask.title" type="text" placeholder="What needs to be done?" class="w-full border-2 rounded-md px-3 py-2 focus:border-red-500 outline-none">
                     </div>
                     <div>
-                        <label class="block text-sm font-semibold mb-1">Academic Period</label>
-                        <select x-model="newTask.period" class="w-full border-2 rounded-md px-3 py-2 focus:border-red-500 outline-none">
-                            <option value="">Select period</option>
-                            <option value="Prelims">📝 Prelims</option>
-                            <option value="Midterms">📚 Midterms</option>
-                            <option value="Finals">🎓 Finals</option>
-                        </select>
-                    </div>
-                    <div>
                         <label class="block text-sm font-semibold mb-1">Priority Level</label>
                         <select x-model="newTask.priority" class="w-full border-2 rounded-md px-3 py-2 focus:border-red-500 outline-none">
                             <option value="">How urgent is it?</option>
@@ -166,8 +156,8 @@
                         <input x-model="newTask.dueDate" type="date" class="w-full border-2 rounded-md px-3 py-2 focus:border-red-500 outline-none">
                     </div>
                     <button @click="addTask" 
-                            :disabled="isAdding || !newTask.title || !newTask.period || !newTask.priority || !newTask.dueDate"
-                            :class="(isAdding || !newTask.title || !newTask.period || !newTask.priority || !newTask.dueDate) ? 'bg-gray-400 cursor-not-allowed shadow-none hover:scale-100' : 'bg-gray-900 shadow-lg hover:bg-gray-800 hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]'"
+                            :disabled="isAdding || !newTask.title || !newTask.priority || !newTask.dueDate"
+                            :class="(isAdding || !newTask.title || !newTask.priority || !newTask.dueDate) ? 'bg-gray-400 cursor-not-allowed shadow-none hover:scale-100' : 'bg-gray-900 shadow-lg hover:bg-gray-800 hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]'"
                             class="w-full py-4 text-white font-semibold rounded-md transition-all flex items-center justify-center gap-2">
                         <template x-if="!isAdding">
                             <span>Add Task 🚀</span>
@@ -279,7 +269,7 @@
                 resetForm() {
                     this.isEditMode = false;
                     this.currentTaskId = null;
-                    this.newTask = { title: '', period: '', priority: '', dueDate: '' };
+                    this.newTask = { title: '', period: 'General', priority: '', dueDate: '' };
                 },
                 getPeriodEmoji(period) {
                     switch (period) {

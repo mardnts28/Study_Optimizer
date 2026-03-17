@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -12,9 +13,7 @@
     <nav class="sticky top-0 z-50 bg-white border-b border-gray-100">
         <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
             <a href="/dashboard/" class="flex items-center gap-2">
-                <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background-color: #8C1007;">
-                    <i data-lucide="book-open" class="w-5 h-5 text-white"></i>
-                </div>
+                <img src="{% static 'main/images/logo.png' %}" alt="Logo" class="w-10 h-10 object-contain">
                 <span class="font-bold text-gray-900">StudyOptimizer</span>
             </a>
             <div class="flex items-center gap-6 text-sm font-medium text-gray-500">
@@ -42,7 +41,7 @@
         </div>
 
         <!-- Stats Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
             <template x-for="stat in stats" :key="stat.label">
                 <div class="bg-white rounded-2xl border-2 border-gray-100 hover:border-red-200 transition-all hover:shadow-lg hover:-translate-y-1 relative overflow-hidden group p-6">
                     <div class="absolute top-0 right-0 text-7xl opacity-5 group-hover:opacity-10 transition-opacity" x-text="stat.emoji"></div>
@@ -66,14 +65,14 @@
                 <div class="flex items-center justify-between mb-4">
                     <div>
                         <div class="text-sm font-medium text-purple-100 mb-1">Your Progress Level</div>
-                        <div class="text-3xl font-bold">Level 8 - Rising Star ⭐</div>
+                        <div class="text-3xl font-bold" x-text="'Level ' + Math.floor({{ completed_count }} / 5 + 1) + ' - Rising Star ⭐'"></div>
                     </div>
                     <div class="text-5xl">🚀</div>
                 </div>
                 <div class="bg-white/20 rounded-full h-4 overflow-hidden backdrop-blur-sm">
-                    <div class="bg-white h-full rounded-full transition-all duration-1000" style="width: 76%"></div>
+                    <div class="bg-white h-full rounded-full transition-all duration-1000" :style="'width: ' + (({{ completed_count }} % 5) / 5 * 100) + '%'"></div>
                 </div>
-                <div class="mt-2 text-sm text-purple-100">76% to Level 9 - Keep going! 🎯</div>
+                <div class="mt-2 text-sm text-purple-100" x-text="(5 - ({{ completed_count }} % 5)) + ' more tasks to next level! 🎯'"></div>
             </div>
         </div>
 
@@ -83,7 +82,7 @@
                 <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-b-2 border-gray-100 p-6">
                     <div class="flex items-center gap-2">
                         <i data-lucide="zap" class="w-5 h-5 text-red-700"></i>
-                        <h3 class="font-semibold text-lg">Study Hours Growth</h3>
+                        <h3 class="font-semibold text-lg">Study Hours Overview</h3>
                         <span class="text-lg">📈</span>
                     </div>
                 </div>
@@ -92,7 +91,7 @@
                     <div class="mt-4 p-3 bg-green-50 border-2 border-green-200 rounded-xl">
                         <div class="flex items-center gap-2 text-sm font-semibold text-green-700">
                             <i data-lucide="trending-up" class="w-4 h-4"></i>
-                            <span>+50% increase from last month! 🎉</span>
+                            <span>Based on your recent activity trend! 🎉</span>
                         </div>
                     </div>
                 </div>
@@ -133,7 +132,7 @@
             <div class="bg-white rounded-2xl border-2 border-gray-100 shadow-xl overflow-hidden">
                 <div class="bg-gradient-to-r from-green-50 to-emerald-50 border-b-2 border-gray-100 p-6">
                     <div class="flex items-center gap-2">
-                        <h3 class="font-semibold text-lg">Task Completion</h3>
+                        <h3 class="font-semibold text-lg">General Progress</h3>
                         <span class="text-lg">✅</span>
                     </div>
                 </div>
@@ -146,32 +145,13 @@
             <div class="bg-white rounded-2xl border-2 border-gray-100 shadow-xl overflow-hidden">
                 <div class="bg-gradient-to-r from-pink-50 to-red-50 border-b-2 border-gray-100 p-6">
                     <div class="flex items-center gap-2">
-                        <h3 class="font-semibold text-lg">Time by Subject</h3>
+                        <h3 class="font-semibold text-lg">Activity by Subject</h3>
                         <span class="text-lg">📚</span>
                     </div>
                 </div>
                 <div class="p-6 flex items-center justify-center">
                     <div style="height: 280px; width: 100%;"><canvas id="subjectChart"></canvas></div>
                 </div>
-            </div>
-        </div>
-
-        <!-- Motivational Footer -->
-        <div class="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div class="p-6 bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl border-2 border-blue-200">
-                <div class="text-3xl mb-2">💡</div>
-                <div class="font-bold text-sm text-gray-900 mb-1">Pro Tip</div>
-                <div class="text-xs text-gray-700">Study in 25-min blocks with 5-min breaks for better focus!</div>
-            </div>
-            <div class="p-6 bg-gradient-to-br from-green-50 to-green-100 rounded-2xl border-2 border-green-200">
-                <div class="text-3xl mb-2">🎯</div>
-                <div class="font-bold text-sm text-gray-900 mb-1">Goal Reminder</div>
-                <div class="text-xs text-gray-700">You need 3 more tasks to unlock "Task Master" achievement!</div>
-            </div>
-            <div class="p-6 bg-gradient-to-br from-purple-50 to-purple-100 rounded-2xl border-2 border-purple-200">
-                <div class="text-3xl mb-2">⚡</div>
-                <div class="font-bold text-sm text-gray-900 mb-1">Streak Alert</div>
-                <div class="text-xs text-gray-700">Keep your 7-day streak going! Study today to maintain it!</div>
             </div>
         </div>
     </div>
@@ -183,15 +163,14 @@
                     { label: 'Study Streak', value: '{{ streak }} days', icon: 'flame', color: '#FF6B35', emoji: '🔥' },
                     { label: 'Total Hours', value: '{{ study_hours }}h', icon: 'clock', color: '#8C1007', emoji: '⏰' },
                     { label: 'Goals Hit', value: '{{ completed_count }}/{{ total_tasks }}', icon: 'target', color: '#660B05', emoji: '🎯' },
-                    { label: 'Avg Score', value: '81.5%', icon: 'award', color: '#3E0703', emoji: '⭐' },
+                    { label: 'Completion', value: '{{ completion_rate }}%', icon: 'award', color: '#3E0703', emoji: '⭐' },
                 ],
                 achievements: [
-                    { id: 1, title: '7-Day Streak', description: 'Studied for a week straight!', emoji: '🔥', unlocked: true },
-                    { id: 2, title: 'Early Bird', description: 'Completed 10 tasks early', emoji: '🐦', unlocked: true },
-                    { id: 3, title: 'Night Owl', description: 'Late night study sessions', emoji: '🦉', unlocked: true },
-                    { id: 4, title: 'Task Master', description: 'Complete 50 tasks', emoji: '🏆', unlocked: false },
-                    { id: 5, title: 'Speed Learner', description: 'Summarize 100 docs', emoji: '⚡', unlocked: false },
-                    { id: 6, title: 'Perfect Score', description: 'Get 100% on a test', emoji: '💯', unlocked: false },
+                    { id: 1, title: 'Study Starter', description: 'Complete your first task!', emoji: '🌱', unlocked: {{ completed_count }} >= 1 },
+                    { id: 2, title: '7-Day Streak', description: 'Studied for a week straight!', emoji: '🔥', unlocked: {{ streak }} >= 7 },
+                    { id: 3, title: 'Early Bird', description: 'Complete 10 tasks!', emoji: '🐦', unlocked: {{ completed_count }} >= 10 },
+                    { id: 4, title: 'Speed Learner', description: 'Summarize 5 documents!', emoji: '⚡', unlocked: {{ summaries_count }} >= 5 },
+                    { id: 5, title: 'Task Master', description: 'Complete 25 tasks!', emoji: '🏆', unlocked: {{ completed_count }} >= 25 },
                 ],
                 periodStats: JSON.parse('{{ period_stats_json|safe }}'),
                 initCharts() {
@@ -203,14 +182,15 @@
                         Chart.defaults.color = "#6B7280";
 
                         // Line Chart
+                        const weeklyHours = JSON.parse('{{ weekly_hours_json|safe }}');
                         const hCtx = document.getElementById('hoursChart').getContext('2d');
                         new Chart(hCtx, {
                             type: 'line',
                             data: {
-                                labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+                                labels: ['3 Weeks Ago', '2 Weeks Ago', 'Last Week', 'This Week'],
                                 datasets: [{
                                     label: 'Hours',
-                                    data: [28, 32, 25, 42],
+                                    data: weeklyHours,
                                     borderColor: '#8C1007',
                                     borderWidth: 3,
                                     pointBackgroundColor: '#8C1007',
@@ -237,17 +217,17 @@
                         new Chart(tCtx, {
                             type: 'bar',
                             data: {
-                                labels: this.periodStats.map(s => s.period),
+                                labels: ['General Progress'],
                                 datasets: [
                                     {
                                         label: 'Completed',
-                                        data: this.periodStats.map(s => s.completed),
+                                        data: [this.periodStats[0].completed],
                                         backgroundColor: '#8C1007',
                                         borderRadius: 8
                                     },
                                     {
                                         label: 'Total',
-                                        data: this.periodStats.map(s => s.total),
+                                        data: [this.periodStats[0].total],
                                         backgroundColor: '#e5e7eb',
                                         borderRadius: 8
                                     }
@@ -264,14 +244,16 @@
                         });
 
                         // Pie Chart
+                        const subjectLabels = JSON.parse('{{ subject_labels_json|safe }}');
+                        const subjectData = JSON.parse('{{ subject_data_json|safe }}');
                         const sCtx = document.getElementById('subjectChart').getContext('2d');
                         new Chart(sCtx, {
                             type: 'pie',
                             data: {
-                                labels: ['Computer Science', 'Mathematics', 'Physics', 'English', 'Other Subjects'],
+                                labels: subjectLabels.length > 0 ? subjectLabels : ['No Data'],
                                 datasets: [{
-                                    data: [35, 25, 20, 12, 8],
-                                    backgroundColor: ['#8C1007', '#660B05', '#3E0703', '#B91C1C', '#DC2626'],
+                                    data: subjectData.length > 0 ? subjectData : [1],
+                                    backgroundColor: ['#8C1007', '#660B05', '#3E0703', '#B91C1C', '#DC2626', '#991B1B'],
                                     borderWidth: 0
                                 }]
                             },
@@ -288,10 +270,6 @@
                 }
             }
         }
-        
-        document.addEventListener("DOMContentLoaded", function() {
-            if(window.lucide) { lucide.createIcons(); }
-        });
     </script>
 </body>
 </html>
