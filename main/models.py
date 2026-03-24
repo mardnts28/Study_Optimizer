@@ -84,3 +84,12 @@ class ScheduleItem(models.Model):
 
     def __str__(self):
         return f"{self.day}: {self.activity}"
+
+class Profile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+    bio = models.TextField(max_length=500, blank=True, default="No bio yet... ✍️")
+    major = models.CharField(max_length=100, blank=True, default="General Studies 🎓")
+    location = models.CharField(max_length=100, blank=True, default="Focus Room 📚")
+
+    def __str__(self):
+        return f"{self.user.username}'s Profile"

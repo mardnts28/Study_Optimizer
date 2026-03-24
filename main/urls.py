@@ -24,4 +24,5 @@ urlpatterns = [
     path('collaborate/comments/<int:material_id>/', views.get_material_comments, name='get_comments'),
     path('collaborate/comments/<int:material_id>/add/', views.add_comment, name='add_comment'),
     path('profile/', views.profile, name='profile'),
+    path('search/', views.search_documents, name='search_documents'),
 ]

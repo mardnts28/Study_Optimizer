@@ -42,8 +42,8 @@
                 </div>
                 <p class="text-gray-600">Stay on top of your deadlines and crush your goals! 🎯</p>
             </div>
-            <button @click="isDialogOpen = true" class="shadow-lg hover:shadow-xl transition-all font-semibold bg-gray-900 text-white px-6 py-2 rounded-md flex items-center gap-2">
-                <i data-lucide="plus" class="w-4 h-4"></i>
+            <button @click="openAddModal()" class="shadow-lg hover:shadow-xl transition-all font-bold bg-gray-900 text-white px-8 py-3 rounded-2xl flex items-center gap-2 group">
+                <i data-lucide="plus" class="w-5 h-5 group-hover:rotate-90 transition-transform"></i>
                 Add New Task ✨
             </button>
         </div>
@@ -226,8 +226,10 @@
                     }
                 },
                 async addTask() {
-                    if (this.newTask.title && this.newTask.period && this.newTask.priority && this.newTask.dueDate) {
+                    // Title, Priority, and DueDate are required. Period defaults to General.
+                    if (this.newTask.title && this.newTask.priority && this.newTask.dueDate) {
                         this.isAdding = true;
+                        this.newTask.period = 'General'; // Ensure it's set
                         const url = this.isEditMode ? `/tasks/edit/${this.currentTaskId}/` : '/tasks/add/';
                         try {
                             const response = await fetch(url, {
@@ -258,6 +260,10 @@
                             this.isAdding = false;
                         }
                     }
+                },
+                openAddModal() {
+                    this.resetForm();
+                    this.isDialogOpen = true;
                 },
                 openEditModal(task) {
                     this.isEditMode = true;

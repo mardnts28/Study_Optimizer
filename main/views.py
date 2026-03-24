@@ -7,15 +7,19 @@ from django.views.decorators.csrf import csrf_protect
 from django.views.decorators.http import require_POST
 from django.http import JsonResponse
 from django.db.models import Sum, Count
+from django.contrib.postgres.search import SearchVector, SearchQuery, SearchRank
 import json
 import re
 import io
-import PyPDF2
-import docx
-from pptx import Presentation
-from collections import Counter
 from datetime import date, timedelta
 from .models import Task, SharedMaterial, Comment, SummarizedDocument, ScheduleItem
+from .services import (
+    extract_text_from_file, 
+    generate_document_summary, 
+    generate_batch_synthesis,
+    calculate_user_metrics,
+    search_summarized_documents
+)
 
 @csrf_protect
 def index(request):
@@ -104,10 +108,32 @@ def collaborate(request):
     
     active_students_count = User.objects.count()
     
+    # Calculate Top Contributors
+    from django.db.models import Count
+    top_sharers_raw = User.objects.annotate(
+        shares_count=Count('shared_materials')
+    ).filter(shares_count__gt=0).order_by('-shares_count')[:4]
+    
+    top_contributors = []
+    medals = ['🥇', '🥈', '🥉', '4️⃣']
+    for i, u in enumerate(top_sharers_raw):
+        top_contributors.append({
+            'name': u.username,
+            'count': u.shares_count,
+            'medal': medals[i] if i < len(medals) else str(i+1)
+        })
+
+    # Calculate Trending Topics
+    trending_topics = list(SharedMaterial.objects.values('subject').annotate(
+        count=Count('subject')
+    ).order_by('-count').values_list('subject', flat=True)[:5])
+
     return render(request, "main/collaborate.html", {
         'materials_json': json.dumps(materials_list),
         'active_students': active_students_count,
-        'total_community_likes': total_community_likes
+        'total_community_likes': total_community_likes,
+        'top_contributors': top_contributors,
+        'trending_topics': trending_topics
     })
 
 @login_required
@@ -197,45 +223,37 @@ def add_comment(request, material_id):
 @login_required
 @csrf_protect
 def dashboard(request):
-    user_tasks = Task.objects.filter(user=request.user)
-    active_tasks = user_tasks.filter(completed=False).order_by('due_date')
+    """
+    User dashboard with quick stats, active tasks, and study schedule.
+    """
+    metrics = calculate_user_metrics(request.user)
     
-    total_tasks = user_tasks.count()
-    completed_tasks = user_tasks.filter(completed=True).count()
-    completion_rate = round((completed_tasks / total_tasks * 100), 1) if total_tasks > 0 else 0
-    
+    # Get top 4 active tasks
+    active_tasks = Task.objects.filter(user=request.user, completed=False).order_by('due_date')[:4]
     upcoming_tasks_list = []
-    for t in active_tasks[:4]:
+    for t in active_tasks:
         days_left = (t.due_date - date.today()).days
         upcoming_tasks_list.append({
             'title': t.title,
             'date': t.due_date.strftime('%b %d'),
             'priority': t.priority,
-            'period': 'General',
-            'daysLeft': days_left if days_left >= 0 else 0
+            'period': t.period,
+            'daysLeft': max(0, days_left)
         })
 
-    # General task progress instead of period breakdown
-    total_active = active_tasks.count()
-    completed_today = user_tasks.filter(completed=True, created_at__date=date.today()).count()
-
-    # Weekly Study Hours (Mon-Sun)
+    # Weekly Study Hours (Mon-Sun for the bar chart)
     today = date.today()
     start_of_week = today - timedelta(days=today.weekday())
     daily_hours = []
     for i in range(7):
         day = start_of_week + timedelta(days=i)
-        tasks_on_day = user_tasks.filter(completed=True, created_at__date=day).count()
+        tasks_on_day = Task.objects.filter(user=request.user, completed=True, created_at__date=day).count()
         summaries_on_day = SummarizedDocument.objects.filter(user=request.user, created_at__date=day).count()
         daily_hours.append((tasks_on_day * 2) + (summaries_on_day * 1))
 
     context = {
-        'total_tasks': total_tasks,
-        'completed_count': completed_tasks,
-        'completion_rate': completion_rate,
+        **metrics,
         'upcoming_tasks_json': json.dumps(upcoming_tasks_list),
-        'docs_count': SharedMaterial.objects.filter(author=request.user).count() + SummarizedDocument.objects.filter(user=request.user).count(),
-        'study_hours': (completed_tasks * 2) + (SummarizedDocument.objects.filter(user=request.user).count() * 1),
         'weekly_hours_list': json.dumps(daily_hours),
         'schedule_items_json': json.dumps([{
             'id': item.id,
@@ -250,83 +268,29 @@ def dashboard(request):
 @login_required
 @csrf_protect
 def progress(request):
-    user_tasks = Task.objects.filter(user=request.user)
-    total_tasks = user_tasks.count()
-    completed_tasks = user_tasks.filter(completed=True).count()
-    summaries = SummarizedDocument.objects.filter(user=request.user)
+    """
+    Comprehensive progress tracker showing streaks, hours, and subject heatmaps.
+    """
+    metrics = calculate_user_metrics(request.user)
     
-    # Calculate Streak
-    activity_dates = set()
-    # Note: Using created_at as completion date proxy if no explicit completion timestamp exists
-    for t in user_tasks.filter(completed=True):
-        activity_dates.add(t.created_at.date())
-    for s in summaries:
-        activity_dates.add(s.created_at.date())
-    
-    sorted_dates = sorted(list(activity_dates), reverse=True)
-    streak = 0
-    today = date.today()
-    
-    if sorted_dates:
-        # Check if the streak is still alive (active today or yesterday)
-        if sorted_dates[0] == today or sorted_dates[0] == today - timedelta(days=1):
-            current_date = sorted_dates[0]
-            streak = 1
-            for i in range(1, len(sorted_dates)):
-                if sorted_dates[i] == current_date - timedelta(days=1):
-                    streak += 1
-                    current_date = sorted_dates[i]
-                else:
-                    break
-    
-    # Estimate Study Hours: 2h per completed task, 1h per summary
-    study_hours_total = (completed_tasks * 2) + (summaries.count() * 1)
-    
-    # Subject distribution
-    subjects = {}
-    for t in user_tasks:
-        sub = t.subject if t.subject else 'General'
-        subjects[sub] = subjects.get(sub, 0) + 1
-    for s in summaries:
-        sub = s.subject if s.subject else 'General'
-        subjects[sub] = subjects.get(sub, 0) + 1
-    
-    subject_labels = list(subjects.keys())
-    subject_data = list(subjects.values())
-
-    # Weekly hours (last 4 weeks as requested by chart labels 'Week 1-4' originally, 
-    # but let's do last 4 segments of activity)
-    # Actually the chart has labels 'Week 1', 'Week 2', 'Week 3', 'Week 4'
-    weekly_trend = []
-    for i in range(3, -1, -1):
-        start_date = today - timedelta(days=(i+1)*7)
-        end_date = today - timedelta(days=i*7)
-        tasks_in_week = user_tasks.filter(completed=True, created_at__range=(start_date, end_date)).count()
-        sums_in_week = summaries.filter(created_at__range=(start_date, end_date)).count()
-        weekly_trend.append((tasks_in_week * 2) + sums_in_week)
-
     period_stats = [
-        {'period': 'General Progress', 'completed': completed_tasks, 'total': total_tasks}
+        {'period': 'General Progress', 'completed': metrics['completed_count'], 'total': metrics['total_tasks']}
     ]
     
     context = {
-        'total_tasks': total_tasks,
-        'completed_count': completed_tasks,
-        'completion_rate': round((completed_tasks / total_tasks * 100), 1) if total_tasks > 0 else 0,
-        'streak': streak,
-        'study_hours': study_hours_total,
-        'summaries_count': summaries.count(),
+        **metrics,
         'period_stats_json': json.dumps(period_stats),
-        'subject_labels_json': json.dumps(subject_labels),
-        'subject_data_json': json.dumps(subject_data),
-        'weekly_hours_json': json.dumps(weekly_trend),
+        'subject_labels_json': json.dumps(metrics['subject_labels']),
+        'subject_data_json': json.dumps(metrics['subject_data']),
+        'weekly_hours_json': json.dumps(metrics['weekly_hours_trend']),
     }
     return render(request, "main/progress.html", context)
 
 @login_required
 @csrf_protect
 def upload(request):
-    recent_summaries = SummarizedDocument.objects.filter(user=request.user).order_by('-created_at')[:10]
+    # Handle max document summaries: Increased limit to 50 for the sidebar
+    recent_summaries = SummarizedDocument.objects.filter(user=request.user).order_by('-created_at')[:50]
     summaries_list = []
     for s in recent_summaries:
         summaries_list.append({
@@ -341,8 +305,6 @@ def upload(request):
         'recent_summaries_json': json.dumps(summaries_list)
     })
 
-import PyPDF2
-import io
 
 @login_required
 @require_POST
@@ -352,92 +314,22 @@ def summarize_doc(request):
             return JsonResponse({'status': 'error', 'message': 'No file uploaded'}, status=400)
         
         uploaded_file = request.FILES['file']
-        period = 'General'
         file_name = uploaded_file.name
-        content = ""
         
         # Text Extraction per File Type
-        if file_name.lower().endswith('.pdf'):
-            try:
-                reader = PyPDF2.PdfReader(uploaded_file)
-                for page in reader.pages[:20]: 
-                    text = page.extract_text()
-                    if text: content += text + " "
-            except Exception as e:
-                return JsonResponse({'status': 'error', 'message': f'Error reading PDF: {str(e)}'}, status=400)
+        content = extract_text_from_file(uploaded_file)
         
-        elif file_name.lower().endswith('.docx'):
-            try:
-                doc = docx.Document(uploaded_file)
-                content = " ".join([p.text for p in doc.paragraphs[:100]])
-            except Exception as e:
-                return JsonResponse({'status': 'error', 'message': f'Error reading Word doc: {str(e)}'}, status=400)
-            
-        elif file_name.lower().endswith('.pptx'):
-            try:
-                prs = Presentation(uploaded_file)
-                for slide in prs.slides[:30]:
-                    for shape in slide.shapes:
-                        if hasattr(shape, "text") and shape.text:
-                            content = content + str(shape.text) + " "
-            except Exception as e:
-                return JsonResponse({'status': 'error', 'message': f'Error reading PowerPoint: {str(e)}'}, status=400)
-                        
-        elif file_name.lower().endswith('.txt'):
-            try:
-                content = uploaded_file.read().decode('utf-8', errors='ignore')
-            except Exception as e:
-                return JsonResponse({'status': 'error', 'message': f'Error reading text file: {str(e)}'}, status=400)
-        else:
-            return JsonResponse({'status': 'error', 'message': 'Unsupported file type. Please use PDF, DOCX, PPTX, or TXT.'}, status=400)
-
-        if not content.strip():
+        if not content:
             return JsonResponse({'status': 'error', 'message': 'Could not extract text from document'}, status=400)
 
-        # ---------------------------------------------------------
         # AI Summarization Logic (Extractive)
-        # ---------------------------------------------------------
-        content_clean = re.sub(r'\s+', ' ', content).strip()
-        raw_sents = re.split(r'(?<=[.!?])\s+', content_clean)
-        sentences = [s.strip() for s in raw_sents if len(s.strip()) > 10]
-        
-        words = re.findall(r'\w+', content_clean.lower())
-        stopwords = set(['the', 'and', 'is', 'in', 'to', 'of', 'a', 'that', 'it', 'for', 'on', 'with', 'as', 'this', 'was', 'at', 'by', 'an', 'be', 'are', 'which', 'from', 'or', 'their', 'we', 'your', 'has', 'have', 'were', 'not', 'can', 'will', 'but', 'all', 'they', 'he', 'she', 'his', 'her', 'who', 'about', 'some', 'more', 'so', 'one', 'out', 'up', 'down', 'into', 'over', 'after', 'before', 'then', 'once', 'just', 'only', 'than', 'them', 'if', 'there', 'when', 'any', 'each', 'other', 'been', 'would', 'could', 'should'])
-        
-        freq_dict = {}
-        for w in words:
-            if w not in stopwords and len(w) > 3:
-                freq_dict[w] = freq_dict.get(w, 0) + 1
-        
-        score_map = {}
-        for i, sent in enumerate(sentences):
-            s_words = re.findall(r'\w+', sent.lower())
-            val = sum(freq_dict.get(sw, 0) for sw in s_words)
-            if len(s_words) > 5:
-                score_map[i] = val / (len(s_words) ** 0.5)
-
-        top_indices = sorted(score_map.keys(), key=lambda x: score_map[x], reverse=True)[:10]
-        top_indices.sort()
-        relevant_sentences = [sentences[idx] for idx in top_indices]
-
-        title_line = f"📘 {file_name} – Technical Overview"
-        highlights = [f"✅ {s}" for s in relevant_sentences[:4]]
-        overview_text = relevant_sentences[0] if relevant_sentences else "No significant content found."
-        detail_lines = [f"• {s}" for s in relevant_sentences[1:6]]
-        key_details_text = "\n".join(detail_lines)
-        
-        final_summary = f"{title_line}\n\n"
-        final_summary += "🔑 Executive Highlights\n" + "\n".join(highlights) + "\n\n"
-        final_summary += "📂 Three-Part Breakdown\n"
-        final_summary += f"Overview: {overview_text}\n\n"
-        final_summary += f"Key Details:\n{key_details_text}\n\n"
-        final_summary += "🎯 Takeaway: Reviewing these key points will strengthen your understanding."
+        final_summary, title_line = generate_document_summary(content, file_name)
 
         # Save to DB
         doc = SummarizedDocument.objects.create(
             user=request.user,
             file_name=file_name,
-            period=period,
+            period='General',
             summary_text=final_summary,
             emoji='📄'
         )
@@ -457,40 +349,14 @@ def summarize_batch(request):
     try:
         data = json.loads(request.body)
         doc_ids = data.get('doc_ids', [])
-        period = 'General'
         
         if not doc_ids:
             return JsonResponse({'status': 'error', 'message': 'No documents provided for batch processing'}, status=400)
             
-        docs = SummarizedDocument.objects.filter(id__in=doc_ids, user=request.user)
-        if not docs.exists():
-            return JsonResponse({'status': 'error', 'message': 'Documents not found'}, status=404)
-            
-        # Analysis for patterns & Layered Insights
-        all_text_lower = " ".join([str(d.summary_text) for d in docs]).lower()
+        batch_output = generate_batch_synthesis(doc_ids, request.user)
         
-        doc_categories = []
-        if 'vpn' in all_text_lower or 'network' in all_text_lower: doc_categories.append('Network Security')
-        if 'iam' in all_text_lower or 'policy' in all_text_lower: doc_categories.append('Identity Management')
-        if 'cloud' in all_text_lower or 'aws' in all_text_lower: doc_categories.append('Cloud Infrastructure')
-        if 'setup' in all_text_lower or 'config' in all_text_lower: doc_categories.append('System Configuration')
-        
-        unique_categories = list(set(doc_categories))
-        category_context = " & ".join(unique_categories) if unique_categories else "Technical Systems"
-
-        # Construct Combined Insights (Synthesized Pattern Recognition)
-        batch_output = f"📊 BATCH SYNTHESIS: {category_context}\n\n"
-        
-        if len(unique_categories) >= 2:
-            batch_output += f"🔄 Layered Insights:\n"
-            batch_output += f"These documents define a cohesive {category_context} strategy. For example, {unique_categories[0]} provides the perimeter security necessary for {unique_categories[1]} to function effectively. This vertical integration demonstrates that technical success is dependent on cross-layered configuration alignment.\n\n"
-        else:
-            batch_output += f"🔄 Strategic Focus:\n"
-            batch_output += f"The combined resources provide a comprehensive framework for {category_context}. They establish detailed standards for deployment, auditing, and optimization, ensuring that every configuration step is backed by technical best practices.\n\n"
-        
-        final_sponsor = f"🎯 Final Sponsor Takeaway: This curated set establishes the exact critical competencies required for modern professional excellence. Mastering these overlapping themes bridges the gap between individual configurations and strategic infrastructure management."
-
-        batch_output += final_sponsor
+        if not batch_output:
+             return JsonResponse({'status': 'error', 'message': 'Documents not found or synthesis failed'}, status=404)
         
         return JsonResponse({
             'status': 'success',
@@ -584,30 +450,45 @@ def delete_task(request, task_id):
 
 @login_required
 @csrf_protect
-@login_required
-@csrf_protect
 def profile(request):
-    user_tasks = Task.objects.filter(user=request.user)
-    total_tasks = user_tasks.count()
-    completed_tasks = user_tasks.filter(completed=True).count()
-    completion_rate = round((completed_tasks / total_tasks * 100), 1) if total_tasks > 0 else 0
-    summaries_count = SummarizedDocument.objects.filter(user=request.user).count()
-    study_hours = (completed_tasks * 2) + (summaries_count * 1)
+    """
+    User profile viewing level and academic success metrics.
+    Supports POST for editing profile data.
+    """
+    # Ensure profile exists
+    from .models import Profile
+    profile, created = Profile.objects.get_or_create(user=request.user)
     
-    # Calculate Level: 1 level every 5 completed tasks
-    user_level = (completed_tasks // 5) + 1
-    next_level_progress = int(((completed_tasks % 5) / 5) * 100)
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            username = data.get('username', '').strip()
+            email = data.get('email', '').strip()
+            bio = data.get('bio', '').strip()
+            major = data.get('major', '').strip()
+            
+            if not username:
+                return JsonResponse({'status': 'error', 'message': 'Username cannot be empty'}, status=400)
+            
+            # Check username uniqueness if changed
+            if username != request.user.username and User.objects.filter(username=username).exists():
+                return JsonResponse({'status': 'error', 'message': 'Username already taken'}, status=400)
+            
+            request.user.username = username
+            request.user.email = email
+            request.user.save()
+            
+            profile.bio = bio
+            profile.major = major
+            profile.save()
+            
+            return JsonResponse({'status': 'success', 'message': 'Profile updated successfully!'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
 
-    context = {
-        'user_level': user_level,
-        'next_level_progress': next_level_progress,
-        'docs_count': summaries_count,
-        'completed_count': completed_tasks,
-        'total_tasks': total_tasks,
-        'completion_rate': completion_rate,
-        'study_hours': study_hours,
-    }
-    return render(request, "main/profile.html", context)
+    metrics = calculate_user_metrics(request.user)
+    metrics['profile'] = profile
+    return render(request, "main/profile.html", metrics)
 
 @login_required
 @require_POST
@@ -640,3 +521,21 @@ def delete_schedule_item(request, item_id):
     item = get_object_or_404(ScheduleItem, id=item_id, user=request.user)
     item.delete()
     return JsonResponse({'status': 'success'})
+
+@login_required
+def search_documents(request):
+    """
+    Global search across summarized documents using PostgreSQL full-text search.
+    """
+    query = request.GET.get('q', '')
+    results = search_summarized_documents(request.user, query)
+    
+    formatted_results = [{
+        'id': r.id,
+        'title': r.file_name,
+        'summary': r.summary_text[:200] + '...',
+        'emoji': r.emoji,
+        'date': r.created_at.strftime('%Y-%m-%d')
+    } for r in results]
+    
+    return JsonResponse({'status': 'success', 'results': formatted_results})

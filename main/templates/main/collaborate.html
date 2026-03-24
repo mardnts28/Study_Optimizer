@@ -173,34 +173,18 @@
                         </div>
                     </div>
                     <div class="p-4 space-y-4">
-                        <div class="flex items-center gap-3">
-                            <span class="text-xl">🥇</span>
-                            <div class="flex-1">
-                                <div class="font-semibold text-sm text-gray-900">Aisha Mendez</div>
-                                <div class="text-xs text-gray-500">12 summaries shared</div>
+                        <template x-for="contributor in {{ top_contributors|safe }}" :key="contributor.name">
+                            <div class="flex items-center gap-3">
+                                <span class="text-xl" x-text="contributor.medal"></span>
+                                <div class="flex-1">
+                                    <div class="font-semibold text-sm text-gray-900" x-text="contributor.name"></div>
+                                    <div class="text-xs text-gray-500" x-text="contributor.count + ' summaries shared'"></div>
+                                </div>
                             </div>
-                        </div>
-                        <div class="flex items-center gap-3">
-                            <span class="text-xl">🥈</span>
-                            <div class="flex-1">
-                                <div class="font-semibold text-sm text-gray-900">Sofia Lim</div>
-                                <div class="text-xs text-gray-500">9 summaries shared</div>
-                            </div>
-                        </div>
-                        <div class="flex items-center gap-3">
-                            <span class="text-xl">🥉</span>
-                            <div class="flex-1">
-                                <div class="font-semibold text-sm text-gray-900">Maria Santos</div>
-                                <div class="text-xs text-gray-500">7 summaries shared</div>
-                            </div>
-                        </div>
-                        <div class="flex items-center gap-3">
-                            <span class="text-xl">4️⃣</span>
-                            <div class="flex-1">
-                                <div class="font-semibold text-sm text-gray-900">Carlos Reyes</div>
-                                <div class="text-xs text-gray-500">5 summaries shared</div>
-                            </div>
-                        </div>
+                        </template>
+                        {% if not top_contributors %}
+                        <div class="text-center py-4 text-xs text-gray-400 italic">No contributors yet. Be the first!</div>
+                        {% endif %}
                     </div>
                 </div>
 
@@ -213,9 +197,12 @@
                         </div>
                     </div>
                     <div class="p-4 space-y-2">
-                        <template x-for="topic in ['Data Structures', 'Calculus', 'Database Design', 'OOP Concepts', 'Newton\'s Laws']" :key="topic">
+                        <template x-for="topic in {{ trending_topics|safe }}" :key="topic">
                             <button @click="searchQuery = topic" class="w-full text-left px-3 py-2 rounded-lg border border-gray-100 hover:border-red-200 hover:bg-red-50 transition-all text-sm text-gray-700 hover:text-red-700 font-medium" x-text="'#' + topic"></button>
                         </template>
+                        {% if not trending_topics %}
+                        <div class="text-center py-4 text-xs text-gray-400 italic">No trending topics yet.</div>
+                        {% endif %}
                     </div>
                 </div>
 

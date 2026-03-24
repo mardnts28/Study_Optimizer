@@ -8,6 +8,7 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <link rel="icon" type="image/png" href="{% static 'main/images/logo.png' %}">
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body class="bg-[#FCF9F9] min-h-screen">
     <!-- Navbar -->
@@ -133,14 +134,48 @@
                             </div>
                         </form>
 
-                        <!-- Summary Display -->
-                        <template x-if="summary">
-                            <div class="mt-10 p-8 bg-gradient-to-br from-[#F4FFF8] to-white rounded-[2.5rem] border border-[#D1F7E2] shadow-sm">
-                                <div class="flex items-center gap-3 mb-6">
-                                    <i data-lucide="sparkles" class="w-6 h-6 text-green-600"></i>
-                                    <h3 class="font-bold text-xl text-gray-900" x-text="title || 'Summary Ready!'"></h3>
-                                </div>
-                                <div class="text-sm text-gray-700 leading-relaxed font-medium whitespace-pre-line" x-text="summary"></div>
+                        <!-- Multiple Summary Display -->
+                        <template x-if="uploadResults.length > 0">
+                            <div class="mt-10 space-y-8">
+                                <h3 class="font-bold text-2xl text-gray-900 flex items-center gap-3">
+                                    <i data-lucide="layout-list" class="w-6 h-6 text-red-600"></i>
+                                    Results for This Session
+                                </h3>
+                                <template x-for="res in uploadResults" :key="res.id">
+                                    <div :class="res.error ? 'border-red-100 bg-red-50/30' : 'border-[#D1F7E2] bg-gradient-to-br from-[#F4FFF8] to-white'" class="p-8 rounded-[2.5rem] border shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                        <div class="flex items-center justify-between mb-6">
+                                            <div class="flex items-center gap-3">
+                                                <span class="text-3xl" x-text="res.error ? '❌' : (res.emoji || '📄')"></span>
+                                                <div>
+                                                    <h4 class="font-bold text-lg text-gray-900" x-text="res.title"></h4>
+                                                    <p class="text-xs text-gray-400 font-medium" x-text="res.error ? 'Processing Failed' : 'Summarized Successfully'"></p>
+                                                </div>
+                                            </div>
+                                            <div class="flex items-center gap-2" x-show="!res.error">
+                                                <button @click="copySummary(res.text)" class="p-2 hover:bg-green-100 rounded-lg text-green-600 transition-colors" title="Copy Text">
+                                                    <i data-lucide="copy" class="w-4 h-4"></i>
+                                                </button>
+                                                <button @click="downloadSinglePDF(res)" class="p-2 hover:bg-blue-100 rounded-lg text-blue-600 transition-colors" title="Download PDF">
+                                                    <i data-lucide="file-down" class="w-4 h-4"></i>
+                                                </button>
+                                                <a :href="'/collaborate/?search=' + res.title" class="px-4 py-2 bg-red-50 text-red-700 rounded-xl text-xs font-bold hover:bg-red-100 transition-colors">
+                                                    Share 🤝
+                                                </a>
+                                            </div>
+                                        </div>
+                                        <template x-if="!res.error">
+                                            <div class="text-sm text-gray-700 leading-relaxed whitespace-pre-line bg-white/50 p-6 rounded-2xl border border-[#E9FBEF]" x-text="res.text"></div>
+                                        </template>
+                                        <template x-if="res.error">
+                                            <div class="p-4 bg-red-100/50 border border-red-200 rounded-2xl">
+                                                <p class="text-sm text-red-700 font-semibold flex items-center gap-2">
+                                                    <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+                                                    <span x-text="res.error"></span>
+                                                </p>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </template>
                             </div>
                         </template>
                     </div>
@@ -218,6 +253,7 @@
                 title: '',
                 errorMessage: '',
                 recentSummaries: initialData,
+                uploadResults: [], // track separate results
                 
                 handleFileChange(e) {
                     if (e.target.files) {
@@ -264,12 +300,10 @@
                     if (this.selectedFiles.length === 0) return;
                     
                     this.isProcessing = true;
-                    this.summary = '';
-                    this.title = '';
+                    this.uploadResults = []; 
                     this.errorMessage = '';
                     this.currentFileIndex = 0;
                     let processedDocIds = [];
-                    let individualSummaries = "";
 
                     for (let i = 0; i < this.selectedFiles.length; i++) {
                         this.currentFileIndex = i + 1;
@@ -288,31 +322,57 @@
                                 body: formData
                             });
                             
+                            if (!response.ok) {
+                                let errorDetail = `Error ${response.status}`;
+                                try {
+                                    const data = await response.json();
+                                    errorDetail = data.message || errorDetail;
+                                } catch(e) {}
+                                this.uploadResults.push({
+                                    id: 'err-' + Date.now() + '-' + i,
+                                    title: fileObj.name,
+                                    error: errorDetail,
+                                    emoji: '❌'
+                                });
+                                continue; 
+                            }
+
                             const data = await response.json();
                             if (data.status === 'success') {
-                                // Add individual file summary with a separator
-                                individualSummaries += `📄 File ${i+1} – ${fileObj.name}\n${data.summary}\n\n`;
                                 processedDocIds.push(data.doc_id);
                                 
-                                // Prepend to sidebar list
-                                this.recentSummaries.unshift({
+                                this.uploadResults.push({
                                     id: data.doc_id,
                                     title: fileObj.name,
-                                    period: this.period,
-                                    date: 'Today',
-                                    emoji: '📄',
-                                    summary: data.summary
+                                    text: data.summary,
+                                    emoji: '📄'
                                 });
-                            } else {
-                                this.errorMessage = data.message || `Failed to process ${fileObj.name}`;
+
+                                // Update sidebar (using spread for safety)
+                                if (Array.isArray(this.recentSummaries)) {
+                                    this.recentSummaries = [{
+                                        id: data.doc_id,
+                                        title: fileObj.name,
+                                        date: 'Today',
+                                        emoji: '📄',
+                                        summary: data.summary
+                                    }, ...this.recentSummaries].slice(0, 50);
+                                }
                             }
+                            
+                            await new Promise(r => setTimeout(r, 500));
                         } catch (error) {
-                            console.error('Upload failed:', error);
-                            this.errorMessage = "Connection error. Please try again.";
+                            console.error('Upload failed details:', error);
+                            this.uploadResults.push({
+                                id: 'conn-err-' + Date.now() + '-' + i,
+                                title: fileObj.name,
+                                error: `Connection failed: ${error.message}`,
+                                emoji: '🔌'
+                            });
                         }
                     }
 
-                    // --- Batch Integration Step ---
+                    // Optional Batch Synthesis
                     if (processedDocIds.length > 1 && !this.errorMessage) {
                         try {
                             const batchResponse = await fetch('/summarize_batch/', {
@@ -328,41 +388,79 @@
                             });
                             const batchData = await batchResponse.json();
                             if (batchData.status === 'success') {
-                                this.summary = individualSummaries + "🔄 --- Batch Synthesis ---\n\n" + batchData.combined_summary;
-                                this.title = `📊 Structured Batch Summary (${processedDocIds.length} Files)`;
+                                this.uploadResults.unshift({
+                                    id: 'batch',
+                                    title: '📊 Batch Synthesis Result',
+                                    text: batchData.combined_summary,
+                                    emoji: '🔄'
+                                });
                             }
                         } catch (e) {
                             console.error("Batch integration failed", e);
-                            this.summary = individualSummaries;
-                            this.title = "Individual Summaries Processed";
                         }
-                    } else if (processedDocIds.length === 1) {
-                        // For single files, just show the single summary as before
-                        const summaryParts = individualSummaries.split('\n');
-                        this.summary = summaryParts.slice(1).join('\n').trim();
-                        this.title = `📘 Summary Ready!`;
                     }
-
-                    if (!this.errorMessage) {
-                        this.selectedFiles = [];
-                        window.scrollTo({ top: 0, behavior: 'smooth' });
-                    }
+                    
                     this.isProcessing = false;
-                    this.$nextTick(() => { if(window.lucide) lucide.createIcons() });
+                    this.selectedFiles = []; // Clear current queue on success
+                    this.$nextTick(() => lucide.createIcons());
+                },
+                
+                copySummary(text) {
+                    navigator.clipboard.writeText(text).then(() => {
+                        // Optional: show a small success indicator
+                    });
                 },
                 
                 viewSummary(item) {
+                    console.log('Viewing historical summary:', item.id);
                     this.errorMessage = '';
-                    const lines = item.summary.split('\n').filter(l => l.trim() !== '' || l === '\n');
-                    // Cleaner title extraction
-                    if (lines.length > 0 && lines[0].includes('–')) {
-                        this.title = lines[0];
-                        this.summary = item.summary.replace(lines[0], '').trim();
-                    } else {
-                        this.title = item.title;
-                        this.summary = item.summary;
-                    }
+                    this.isProcessing = false;
+                    
+                    // Force replace with historical item
+                    // Standardize keys: text, title, id, emoji, error (null)
+                    this.uploadResults = [{
+                        id: item.id,
+                        title: item.title,
+                        text: item.summary || item.text || 'No content available.',
+                        emoji: item.emoji || '📄',
+                        error: null
+                    }];
+                    
                     window.scrollTo({ top: 0, behavior: 'smooth' });
+                    this.$nextTick(() => {
+                        if(window.lucide) lucide.createIcons();
+                    });
+                },
+
+                downloadSinglePDF(res) {
+                    const element = document.createElement('div');
+                    element.innerHTML = `
+                        <div style="font-family: sans-serif; padding: 40px; color: #1a202c;">
+                            <div style="display: flex; align-items: center; border-bottom: 2px solid #edf2f7; padding-bottom: 20px; margin-bottom: 30px;">
+                                <div style="font-size: 48px; margin-right: 20px;">${res.emoji || '📄'}</div>
+                                <div>
+                                    <h1 style="margin: 0; font-size: 24px; color: #111827;">${res.title}</h1>
+                                    <p style="margin: 5px 0 0; font-size: 12px; color: #718096; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">Summary Report - StudyOptimizer</p>
+                                </div>
+                            </div>
+                            <div style="font-size: 14px; line-height: 1.8; color: #2d3748; white-space: pre-wrap;">
+                                ${res.text}
+                            </div>
+                            <div style="margin-top: 50px; border-top: 1px solid #edf2f7; padding-top: 20px; text-align: center; font-size: 10px; color: #a0aec0;">
+                                &copy; ${new Date().getFullYear()} StudyOptimizer Core | Academic Intelligence Service
+                            </div>
+                        </div>
+                    `;
+                    
+                    const opt = {
+                      margin:       [10, 10, 10, 10], 
+                      filename:     `${res.title.replace(/\s+/g, '_')}_Summary.pdf`,
+                      image:        { type: 'jpeg', quality: 0.98 },
+                      html2canvas:  { scale: 2, useCORS: true },
+                      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                    };
+                    
+                    html2pdf().set(opt).from(element).save();
                 }
             }
         }
