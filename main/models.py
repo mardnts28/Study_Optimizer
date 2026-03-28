@@ -2,32 +2,15 @@ from django.db import models
 from django.contrib.auth.models import User
 
 class Task(models.Model):
-    PRIORITY_CHOICES = [
-        ('Low', 'Low'),
-        ('Medium', 'Medium'),
-        ('High', 'High'),
-    ]
-    PERIOD_CHOICES = [
-        ('General', 'General'),
-        ('Prelims', 'Prelims'),
-        ('Midterms', 'Midterms'),
-        ('Finals', 'Finals'),
-    ]
-
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='tasks')
+    PRIORITY_CHOICES = [('High', 'High'), ('Medium', 'Medium'), ('Low', 'Low')]
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
     title = models.CharField(max_length=255)
     subject = models.CharField(max_length=100, default='General')
-    period = models.CharField(max_length=20, choices=PERIOD_CHOICES, default='General')
+    period = models.CharField(max_length=100, default='General')
     priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES)
     due_date = models.DateField()
     completed = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return self.title
-
-    class Meta:
-        ordering = ['completed', 'due_date']
 
 class SharedMaterial(models.Model):
     PERIOD_CHOICES = [

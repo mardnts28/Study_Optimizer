@@ -1,0 +1,166 @@
+{% extends "main/admin/admin_base.html" %}
+{% block title %}Collaboration Control — StudyOptimizer Admin{% endblock %}
+
+{% block extra_head %}
+<style>
+  .page-title { font-size:26px; font-weight:700; color:#1A1A1A; margin-bottom:4px; }
+  .page-sub   { font-size:14px; color:#6B7280; margin-bottom:28px; }
+
+  .stats-row  { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-bottom:32px; }
+  .stat-card  { background:#fff; border-radius:14px; border:1px solid #F0E4E4; padding:22px 24px; display:flex; align-items:center; gap:18px; }
+  .stat-icon  { width:48px; height:48px; border-radius:12px; background:linear-gradient(135deg,#7B1818,#9B2020); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .stat-icon i { color:#fff; font-size:20px; }
+  .stat-num  { font-size:28px; font-weight:700; color:#1A1A1A; line-height:1; }
+  .stat-lbl  { font-size:13px; color:#6B7280; margin-top:3px; }
+
+  .section-title { font-size:15px; font-weight:700; color:#7B1818; margin-bottom:16px; }
+
+  .feed-card  { background:#fff; border-radius:14px; border:1px solid #F0E4E4; overflow:hidden; margin-bottom:24px; }
+  .post-item  { padding:22px 24px; border-bottom:1px solid #F7EDED; }
+  .post-item:last-child { border-bottom:none; }
+
+  .post-header { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:14px; }
+  .post-meta   { display:flex; align-items:center; gap:12px; }
+  .avatar      { width:38px; height:38px; border-radius:50%; background:linear-gradient(135deg,#7B1818,#9B2020); display:flex; align-items:center; justify-content:center; color:#fff; font-size:14px; font-weight:700; flex-shrink:0; }
+  .poster-name { font-size:14px; font-weight:600; color:#1A1A1A; }
+  .post-time   { font-size:12px; color:#9CA3AF; margin-top:2px; }
+
+  .post-right  { display:flex; align-items:center; gap:10px; }
+  .subject-tag { padding:3px 12px; border-radius:20px; font-size:12px; font-weight:600; }
+  .tag-math    { background:#FEF3C7; color:#92400E; }
+  .tag-physics { background:#FEE2E2; color:#991B1B; }
+  .tag-english { background:#EDE9FE; color:#6D28D9; }
+  .tag-science { background:#D1FAE5; color:#065F46; }
+  .tag-default { background:#F3F4F6; color:#374151; }
+  .menu-btn    { background:none; border:none; cursor:pointer; color:#9CA3AF; font-size:16px; }
+  .menu-btn:hover { color:#7B1818; }
+
+  .post-title  { font-size:15px; font-weight:600; color:#1A1A1A; margin-bottom:6px; }
+  .post-body   { font-size:13px; color:#6B7280; margin-bottom:14px; line-height:1.5; }
+
+  .post-stats  { display:flex; align-items:center; gap:20px; }
+  .post-stat   { display:flex; align-items:center; gap:6px; font-size:13px; color:#6B7280; }
+  .post-stat i { font-size:13px; }
+
+  /* Subject Tags */
+  .tags-card   { background:#fff; border-radius:14px; border:1px solid #F0E4E4; padding:22px 24px; }
+  .tags-input-row { display:flex; gap:10px; margin-bottom:16px; }
+  .tags-input  { flex:1; padding:10px 14px; border:1px solid #E5E7EB; border-radius:10px; font-family:'DM Sans',sans-serif; font-size:13px; outline:none; }
+  .tags-input:focus { border-color:#7B1818; }
+  .btn-add     { background:#7B1818; color:#fff; border:none; border-radius:10px; padding:10px 20px; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:6px; }
+  .btn-add:hover { background:#5C1010; }
+
+  .tags-list   { display:flex; flex-wrap:wrap; gap:8px; }
+  .tag-pill    { display:flex; align-items:center; gap:6px; padding:5px 12px; border-radius:20px; border:1px solid #E8C4C4; background:#FDF6F6; font-size:13px; color:#7B1818; font-weight:500; }
+  .tag-pill button { background:none; border:none; cursor:pointer; color:#9CA3AF; font-size:12px; line-height:1; }
+  .tag-pill button:hover { color:#7B1818; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-title">Collaboration Control</div>
+<div class="page-sub">Moderate community feed and manage content</div>
+
+<!-- STATS -->
+<div class="stats-row">
+  <div class="stat-card">
+    <div class="stat-icon"><i class="fas fa-comment-dots"></i></div>
+    <div><div class="stat-num">{{ active_posts|default:materials.count }}</div><div class="stat-lbl">Active Posts</div></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon"><i class="fas fa-heart"></i></div>
+    <div><div class="stat-num">{{ total_interactions|default:"0" }}</div><div class="stat-lbl">Total Interactions</div></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon"><i class="fas fa-eye"></i></div>
+    <div><div class="stat-num">{{ total_views|default:"0" }}</div><div class="stat-lbl">Total Views</div></div>
+  </div>
+</div>
+
+<!-- COMMUNITY FEED -->
+<div class="section-title">Community Feed</div>
+<div class="feed-card">
+  {% for m in materials %}
+  <div class="post-item">
+    <div class="post-header">
+      <div class="post-meta">
+        <div class="avatar">{{ m.author.username.0|upper }}</div>
+        <div>
+          <div class="poster-name">{{ m.author.get_full_name|default:m.author.username }}</div>
+          <div class="post-time">{{ m.created_at|timesince }} ago</div>
+        </div>
+      </div>
+      <div class="post-right">
+        <span class="subject-tag tag-default">{{ m.subject }}</span>
+        <button class="menu-btn"><i class="fas fa-ellipsis-vertical"></i></button>
+      </div>
+    </div>
+    <div class="post-title">{{ m.title }}</div>
+    <div class="post-body">{{ m.content|truncatechars:120 }}</div>
+    <div class="post-stats">
+      <span class="post-stat"><i class="fas fa-heart"></i> {{ m.likes.count }} likes</span>
+      <span class="post-stat"><i class="fas fa-comment"></i> {{ m.comments.count }} comments</span>
+      <span class="post-stat"><i class="fas fa-eye"></i> {{ m.views }} views</span>
+    </div>
+  </div>
+  {% empty %}
+  <!-- Sample posts for UI preview -->
+  <div class="post-item">
+    <div class="post-header"><div class="post-meta"><div class="avatar">M</div><div><div class="poster-name">Mary Faith Ardientes</div><div class="post-time">2 hours ago</div></div></div><div class="post-right"><span class="subject-tag tag-math">Mathematics</span><button class="menu-btn"><i class="fas fa-ellipsis-vertical"></i></button></div></div>
+    <div class="post-title">Calculus Study Guide</div>
+    <div class="post-body">Comprehensive notes on derivatives and integrals. Perfect for midterm prep!</div>
+    <div class="post-stats"><span class="post-stat"><i class="fas fa-heart"></i> 45 likes</span><span class="post-stat"><i class="fas fa-comment"></i> 12 comments</span><span class="post-stat"><i class="fas fa-eye"></i> 234 views</span></div>
+  </div>
+  <div class="post-item">
+    <div class="post-header"><div class="post-meta"><div class="avatar">J</div><div><div class="poster-name">John Doe</div><div class="post-time">5 hours ago</div></div></div><div class="post-right"><span class="subject-tag tag-physics">Physics</span><button class="menu-btn"><i class="fas fa-ellipsis-vertical"></i></button></div></div>
+    <div class="post-title">Physics Lab Report Template</div>
+    <div class="post-body">A structured template for lab reports with examples</div>
+    <div class="post-stats"><span class="post-stat"><i class="fas fa-heart"></i> 28 likes</span><span class="post-stat"><i class="fas fa-comment"></i> 7 comments</span><span class="post-stat"><i class="fas fa-eye"></i> 156 views</span></div>
+  </div>
+  <div class="post-item">
+    <div class="post-header"><div class="post-meta"><div class="avatar">S</div><div><div class="poster-name">Sarah Smith</div><div class="post-time">1 day ago</div></div></div><div class="post-right"><span class="subject-tag tag-english">English</span><button class="menu-btn"><i class="fas fa-ellipsis-vertical"></i></button></div></div>
+    <div class="post-title">English Literature Analysis</div>
+    <div class="post-body">Character analysis and themes from Shakespeare's works</div>
+    <div class="post-stats"><span class="post-stat"><i class="fas fa-heart"></i> 62 likes</span><span class="post-stat"><i class="fas fa-comment"></i> 18 comments</span><span class="post-stat"><i class="fas fa-eye"></i> 312 views</span></div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- SUBJECT TAGS -->
+<div class="section-title">Subject Tags</div>
+<div class="tags-card">
+  <div class="tags-input-row">
+    <input class="tags-input" id="newTag" type="text" placeholder="Add new subject...">
+    <button class="btn-add" onclick="addTag()"><i class="fas fa-tag"></i> Add</button>
+  </div>
+  <div class="tags-list" id="tagsList">
+    {% for topic in trending_topics %}
+    <div class="tag-pill">{{ topic }} <button onclick="this.parentElement.remove()">✕</button></div>
+    {% empty %}
+    <div class="tag-pill">Physics <button onclick="this.parentElement.remove()">✕</button></div>
+    <div class="tag-pill">Chemistry <button onclick="this.parentElement.remove()">✕</button></div>
+    <div class="tag-pill">Biology <button onclick="this.parentElement.remove()">✕</button></div>
+    <div class="tag-pill">English <button onclick="this.parentElement.remove()">✕</button></div>
+    <div class="tag-pill">History <button onclick="this.parentElement.remove()">✕</button></div>
+    <div class="tag-pill">Computer Science <button onclick="this.parentElement.remove()">✕</button></div>
+    <div class="tag-pill">Engineering <button onclick="this.parentElement.remove()">✕</button></div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  function addTag() {
+    const input = document.getElementById('newTag');
+    const val = input.value.trim();
+    if (!val) return;
+    const pill = document.createElement('div');
+    pill.className = 'tag-pill';
+    pill.innerHTML = `${val} <button onclick="this.parentElement.remove()">✕</button>`;
+    document.getElementById('tagsList').appendChild(pill);
+    input.value = '';
+  }
+  document.getElementById('newTag').addEventListener('keydown', e => { if(e.key==='Enter') addTag(); });
+</script>
+{% endblock %}

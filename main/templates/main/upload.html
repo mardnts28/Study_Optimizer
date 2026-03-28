@@ -53,57 +53,65 @@
                             <!-- Drop Zone -->
                             <div>
                                 <label class="block text-sm font-bold text-[#8C1007] mb-4">Drop your file here</label>
-                                <div class="relative" 
-                                     @dragover.prevent="isDragging = true" 
-                                     @dragleave.prevent="isDragging = false"
-                                     @drop.prevent="handleDrop($event)">
-                                    
-                                    <div :class="isDragging ? 'border-red-500 bg-red-50' : 'border-gray-200 bg-white'" 
-                                         class="flex justify-center px-6 py-16 border-2 border-dashed rounded-[2.5rem] transition-all">
+
+                                <div class="relative cursor-pointer"
+                                    @click="$refs.fileInput.click()"
+                                    @dragover.prevent="isDragging = true"
+                                    @dragleave.prevent="isDragging = false"
+                                    @drop.prevent="handleDrop($event)">
+
+                                    <!-- Hidden Input -->
+                                    <input type="file"
+                                        x-ref="fileInput"
+                                        class="hidden"
+                                        @change="handleFileChange"
+                                        accept=".pdf,.docx,.pptx,.txt"
+                                        multiple>
+
+                                    <!-- Drop Zone Box -->
+                                    <div :class="isDragging ? 'border-red-500 bg-red-50' : 'border-gray-200 bg-white'"
+                                        class="flex justify-center px-6 py-16 border-2 border-dashed rounded-[2.5rem] transition-all">
                                         <div class="text-center">
                                             <div class="mx-auto w-20 h-20 rounded-full flex items-center justify-center mb-6 bg-[#A8100C] shadow-lg">
                                                 <i data-lucide="upload" class="h-10 w-10 text-white"></i>
                                             </div>
                                             <div class="space-y-2">
                                                 <div class="text-xl flex items-baseline justify-center gap-1">
-                                                    <label for="file-upload" class="cursor-pointer font-bold text-[#A8100C] hover:underline">
-                                                        <span>Click to upload</span>
-                                                        <input id="file-upload" type="file" class="sr-only" @change="handleFileChange" accept=".pdf,.docx,.pptx,.txt" multiple>
-                                                    </label>
+                                                    <span class="font-bold text-[#A8100C] hover:underline">Click to upload</span>
                                                     <span class="text-gray-500 font-medium">or drag and drop</span>
                                                 </div>
                                                 <p class="text-sm text-gray-400 font-medium tracking-wide">PDF, DOC, PPT, TXT up to 10MB</p>
                                             </div>
                                         </div>
                                     </div>
-
-                                    <!-- Selected Files (Green Theme) -->
-                                    <template x-if="selectedFiles.length > 0">
-                                        <div class="mt-8 space-y-4">
-
-                                            <template x-for="(file, index) in selectedFiles" :key="index">
-                                                <div class="p-5 bg-[#F4FFF8] border border-[#D1F7E2] rounded-3xl flex items-center gap-4 transition-all">
-                                                    <div class="w-12 h-12 rounded-xl bg-white flex items-center justify-center text-gray-300">
-                                                        <i data-lucide="file-text" class="w-6 h-6"></i>
-                                                    </div>
-                                                    <div class="flex-1 min-w-0">
-                                                        <div class="font-bold text-sm text-gray-900 truncate" x-text="file.name"></div>
-                                                        <div class="text-xs text-gray-400 font-medium" x-text="(file.size / 1024).toFixed(1) + ' KB'"></div>
-                                                    </div>
-                                                    <div class="flex items-center gap-3">
-                                                        <div class="flex items-center justify-center w-8 h-8 rounded-full border-2 border-green-400">
-                                                            <i data-lucide="check" class="w-5 h-5 text-green-500"></i>
-                                                        </div>
-                                                        <button @click.prevent="removeFile(index)" class="p-1 text-gray-300 hover:text-red-500 transition-colors">
-                                                            <i data-lucide="x" class="w-5 h-5"></i>
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            </template>
-                                        </div>
-                                    </template>
                                 </div>
+
+                                <!-- Selected Files (Green Theme) — INSIDE the drop zone section div -->
+                                <template x-if="selectedFiles.length > 0">
+                                    <div class="mt-8 space-y-4">
+                                        <template x-for="(file, index) in selectedFiles" :key="index">
+                                            <div class="p-5 bg-[#F4FFF8] border border-[#D1F7E2] rounded-3xl flex items-center gap-4 transition-all">
+                                                <div class="w-12 h-12 rounded-xl bg-white flex items-center justify-center text-gray-300">
+                                                    <i data-lucide="file-text" class="w-6 h-6"></i>
+                                                </div>
+                                                <div class="flex-1 min-w-0">
+                                                    <div class="font-bold text-sm text-gray-900 truncate" x-text="file.name"></div>
+                                                    <div class="text-xs text-gray-400 font-medium" x-text="(file.size / 1024).toFixed(1) + ' KB'"></div>
+                                                </div>
+                                                <div class="flex items-center gap-3">
+                                                    <div class="flex items-center justify-center w-8 h-8 rounded-full border-2 border-green-400">
+                                                        <i data-lucide="check" class="w-5 h-5 text-green-500"></i>
+                                                    </div>
+                                                    <button @click.prevent="removeFile(index)" class="p-1 text-gray-300 hover:text-red-500 transition-colors">
+                                                        <i data-lucide="x" class="w-5 h-5"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </template>
                             </div>
+                            <!-- END Drop Zone section -->
 
                             <!-- Footer Section -->
                             <div class="space-y-6">
@@ -114,7 +122,7 @@
                                     </div>
                                 </template>
 
-                                <button type="submit" 
+                                <button type="submit"
                                         :disabled="selectedFiles.length === 0 || isProcessing"
                                         :class="(selectedFiles.length === 0 || isProcessing) ? 'bg-[#F3F4F6] text-gray-300 cursor-not-allowed border-transparent' : 'bg-gradient-to-r from-[#8C1007] to-[#A8100C] text-white hover:shadow-xl hover:scale-[1.01] active:scale-[0.98] border-transparent'"
                                         class="w-full py-5 rounded-3xl font-bold flex items-center justify-center gap-3 transition-all border shadow-lg shadow-red-100">
@@ -134,48 +142,14 @@
                             </div>
                         </form>
 
-                        <!-- Multiple Summary Display -->
-                        <template x-if="uploadResults.length > 0">
-                            <div class="mt-10 space-y-8">
-                                <h3 class="font-bold text-2xl text-gray-900 flex items-center gap-3">
-                                    <i data-lucide="layout-list" class="w-6 h-6 text-red-600"></i>
-                                    Results for This Session
-                                </h3>
-                                <template x-for="res in uploadResults" :key="res.id">
-                                    <div :class="res.error ? 'border-red-100 bg-red-50/30' : 'border-[#D1F7E2] bg-gradient-to-br from-[#F4FFF8] to-white'" class="p-8 rounded-[2.5rem] border shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-500">
-                                        <div class="flex items-center justify-between mb-6">
-                                            <div class="flex items-center gap-3">
-                                                <span class="text-3xl" x-text="res.error ? '❌' : (res.emoji || '📄')"></span>
-                                                <div>
-                                                    <h4 class="font-bold text-lg text-gray-900" x-text="res.title"></h4>
-                                                    <p class="text-xs text-gray-400 font-medium" x-text="res.error ? 'Processing Failed' : 'Summarized Successfully'"></p>
-                                                </div>
-                                            </div>
-                                            <div class="flex items-center gap-2" x-show="!res.error">
-                                                <button @click="copySummary(res.text)" class="p-2 hover:bg-green-100 rounded-lg text-green-600 transition-colors" title="Copy Text">
-                                                    <i data-lucide="copy" class="w-4 h-4"></i>
-                                                </button>
-                                                <button @click="downloadSinglePDF(res)" class="p-2 hover:bg-blue-100 rounded-lg text-blue-600 transition-colors" title="Download PDF">
-                                                    <i data-lucide="file-down" class="w-4 h-4"></i>
-                                                </button>
-                                                <a :href="'/collaborate/?search=' + res.title" class="px-4 py-2 bg-red-50 text-red-700 rounded-xl text-xs font-bold hover:bg-red-100 transition-colors">
-                                                    Share 🤝
-                                                </a>
-                                            </div>
-                                        </div>
-                                        <template x-if="!res.error">
-                                            <div class="text-sm text-gray-700 leading-relaxed whitespace-pre-line bg-white/50 p-6 rounded-2xl border border-[#E9FBEF]" x-text="res.text"></div>
-                                        </template>
-                                        <template x-if="res.error">
-                                            <div class="p-4 bg-red-100/50 border border-red-200 rounded-2xl">
-                                                <p class="text-sm text-red-700 font-semibold flex items-center gap-2">
-                                                    <i data-lucide="alert-triangle" class="w-4 h-4"></i>
-                                                    <span x-text="res.error"></span>
-                                                </p>
-                                            </div>
-                                        </template>
-                                    </div>
-                                </template>
+                        <!-- Summary Display -->
+                        <template x-if="summary">
+                            <div class="mt-10 p-8 bg-gradient-to-br from-[#F4FFF8] to-white rounded-[2.5rem] border border-[#D1F7E2] shadow-sm">
+                                <div class="flex items-center gap-3 mb-6">
+                                    <i data-lucide="sparkles" class="w-6 h-6 text-green-600"></i>
+                                    <h3 class="font-bold text-xl text-gray-900" x-text="title || 'Summary Ready!'"></h3>
+                                </div>
+                                <div class="text-sm text-gray-700 leading-relaxed font-medium whitespace-pre-line" x-text="summary"></div>
                             </div>
                         </template>
                     </div>

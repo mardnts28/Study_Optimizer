@@ -1,0 +1,210 @@
+{% extends "main/admin/admin_base.html" %}
+{% block title %}Analytics — StudyOptimizer Admin{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  .page-title { font-size:26px; font-weight:700; color:#1A1A1A; margin-bottom:4px; }
+  .page-sub   { font-size:14px; color:#6B7280; margin-bottom:28px; }
+
+  .stats-row  { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-bottom:32px; }
+  .stat-card  { background:#fff; border-radius:14px; border:1px solid #F0E4E4; padding:22px 24px; display:flex; align-items:center; gap:18px; }
+  .stat-icon  { width:48px; height:48px; border-radius:12px; background:linear-gradient(135deg,#7B1818,#9B2020); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .stat-icon i { color:#fff; font-size:20px; }
+  .stat-num  { font-size:26px; font-weight:700; color:#1A1A1A; line-height:1; }
+  .stat-lbl  { font-size:13px; color:#6B7280; margin-top:3px; }
+
+  .section-title { font-size:15px; font-weight:700; color:#7B1818; margin-bottom:12px; }
+
+  .charts-2col { display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:24px; }
+  .chart-card  { background:#fff; border-radius:14px; border:1px solid #F0E4E4; padding:20px 24px; }
+  .chart-card.full { grid-column:1/-1; }
+
+  /* FIX: wrap canvas in a fixed-height div so Chart.js respects the size */
+  .chart-wrap        { position:relative; }
+  .chart-wrap--sm    { height:280px; }  /* two-column charts   */
+  .chart-wrap--md    { height:280px; }  /* full-width charts   */
+
+  /* Legend list */
+  .legend-list { margin-top:12px; display:flex; flex-direction:column; gap:5px; }
+  .legend-item { display:flex; align-items:center; justify-content:space-between; font-size:12px; color:#374151; }
+  .legend-dot  { width:9px; height:9px; border-radius:50%; margin-right:7px; flex-shrink:0; }
+  .legend-left  { display:flex; align-items:center; }
+  .legend-right { color:#6B7280; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-title">Global Task Analytics</div>
+<div class="page-sub">Understanding student behavior and productivity patterns</div>
+
+<!-- STATS -->
+<div class="stats-row">
+  <div class="stat-card">
+    <div class="stat-icon"><i class="fas fa-chart-line"></i></div>
+    <div><div class="stat-num">{{ total_tasks_week|default:"0" }}</div><div class="stat-lbl">Total Tasks This Week</div></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon"><i class="fas fa-clock"></i></div>
+    <div><div class="stat-num">{{ peak_productivity|default:"6 PM - 9 PM" }}</div><div class="stat-lbl">Peak Productivity</div></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon"><i class="fas fa-calendar-days"></i></div>
+    <div><div class="stat-num">{{ most_productive_day|default:"Friday" }}</div><div class="stat-lbl">Most Productive Day</div></div>
+  </div>
+</div>
+
+<!-- POPULAR SUBJECTS + DISTRIBUTION -->
+<div class="charts-2col">
+  <div class="chart-card">
+    <div class="section-title">Popular Subjects</div>
+    <!-- FIX: canvas wrapped in sized div; removed bare height attribute -->
+    <div class="chart-wrap chart-wrap--sm">
+      <canvas id="subjectsBar"></canvas>
+    </div>
+    <div class="legend-list" id="subjectLegend"></div>
+  </div>
+  <div class="chart-card">
+    <div class="section-title">Subject Distribution</div>
+    <div class="chart-wrap chart-wrap--sm">
+      <canvas id="subjectsPie"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- HEATMAP -->
+<div class="chart-card" style="margin-bottom:24px;">
+  <div class="section-title">Completion Heatmap — Peak Productivity Times</div>
+  <div class="chart-wrap chart-wrap--md">
+    <canvas id="heatmapChart"></canvas>
+  </div>
+</div>
+
+<!-- WEEKLY TRENDS -->
+<div class="chart-card">
+  <div class="section-title">Weekly Task Trends</div>
+  <div class="chart-wrap chart-wrap--md">
+    <canvas id="weeklyTrends"></canvas>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  const maroon = '#7B1818';
+  const shades = ['#3D0C0C','#5C1010','#7B1818','#9B2020','#BB4040','#D97070','#F0B0B0'];
+  const labels = {{ subject_labels_json|default:'["Mathematics","Science","English","Physics","Chemistry"]'|safe }};
+  const counts = {{ subject_counts_json|default:'[342,298,245,187,156]'|safe }};
+  const total  = counts.reduce((a, b) => a + b, 0);
+
+  /* Shared option fragments */
+  const baseScales = {
+    x: { grid: { display: false }, ticks: { color: '#9CA3AF', font: { size: 11 } } },
+    y: { grid: { color: '#F3E8E8' }, ticks: { color: '#9CA3AF', font: { size: 11 } } }
+  };
+
+  // ── Bar Chart ──
+  new Chart(document.getElementById('subjectsBar'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{ data: counts, backgroundColor: maroon, borderRadius: 4 }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,   // FIX: honours the wrapper div height
+      plugins: { legend: { display: false } },
+      scales: baseScales
+    }
+  });
+
+  // FIX: build legend with array + join instead of innerHTML += in a loop
+  const legendEl = document.getElementById('subjectLegend');
+  legendEl.innerHTML = labels.map((lbl, i) => {
+    const pct = Math.round(counts[i] / total * 100);
+    return `<div class="legend-item">
+      <div class="legend-left"><div class="legend-dot" style="background:${shades[i]}"></div>${lbl}</div>
+      <div class="legend-right">${counts[i]} tasks (${pct}%)</div>
+    </div>`;
+  }).join('');
+
+  // ── Pie Chart ──
+  new Chart(document.getElementById('subjectsPie'), {
+    type: 'pie',
+    data: {
+      labels,
+      datasets: [{ data: counts, backgroundColor: shades, borderWidth: 2, borderColor: '#fff' }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,   // FIX
+      plugins: {
+        legend: {
+          position: 'right',
+          labels: { font: { size: 11 }, color: '#374151', boxWidth: 10 }
+        }
+      }
+    }
+  });
+
+  // ── Heatmap (stacked bar) ──
+  const times   = ['6 AM','9 AM','12 PM','3 PM','6 PM','9 PM','12 AM'];
+  const days    = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const heatData = [
+    [10,40,60,80,120,90,30],
+    [15,50,55,90,130,80,25],
+    [8, 45,50,70,110,70,20],
+    [12,55,65,100,140,85,28],
+    [20,60,70,110,150,95,35],
+    [5, 30,40,60, 80,60,15],
+    [3, 20,30,50, 70,50,10],
+  ];
+  new Chart(document.getElementById('heatmapChart'), {
+    type: 'bar',
+    data: {
+      labels: times,
+      datasets: days.map((day, i) => ({
+        label: day,
+        data: heatData[i],
+        backgroundColor: shades[i],
+        stack: 'stack'             // all datasets share one stack key → stacked bars
+      }))
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,  // FIX
+      plugins: {
+        legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 10 } }
+      },
+      scales: {
+        // FIX: stacked:true must be on the scale objects, not just the dataset
+        x: { stacked: true, grid: { display: false }, ticks: { color: '#9CA3AF', font: { size: 11 } } },
+        y: { stacked: true, grid: { color: '#F3E8E8' }, ticks: { color: '#9CA3AF', font: { size: 11 } } }
+      }
+    }
+  });
+
+  // ── Weekly Trends ──
+  const weekLabels = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const completed  = {{ weekly_completed_json|default:'[235,250,240,270,265,195,175]'|safe }};
+  const assigned   = {{ weekly_assigned_json|default:'[280,310,275,315,305,220,195]'|safe }};
+  new Chart(document.getElementById('weeklyTrends'), {
+    type: 'bar',
+    data: {
+      labels: weekLabels,
+      datasets: [
+        { label: 'Completed', data: completed, backgroundColor: maroon,                  borderRadius: 3 },
+        { label: 'Assigned',  data: assigned,  backgroundColor: 'rgba(123,24,24,0.20)', borderRadius: 3 }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,  // FIX
+      plugins: {
+        legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 10 } }
+      },
+      scales: baseScales
+    }
+  });
+</script>
+{% endblock %}

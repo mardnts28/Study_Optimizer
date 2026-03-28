@@ -1,0 +1,186 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{% block title %}StudyOptimizer Admin{% endblock %}</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Playfair+Display:wght@600&display=swap" rel="stylesheet"/>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --maroon:       #7B1818;
+      --maroon-dark:  #5C1010;
+      --maroon-light: #9B2020;
+      --maroon-bg:    #F9F1F1;
+      --accent:       #C0392B;
+      --soft-red:     #E8C4C4;
+      --text:         #1A1A1A;
+      --text-muted:   #6B7280;
+      --white:        #FFFFFF;
+      --card-bg:      #FFFFFF;
+      --border:       #F0E4E4;
+      --sidebar-w:    240px;
+      --green:        #16A34A;
+      --gray-bg:      #f9fafb;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--gray-bg);
+      color: var(--text);
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* ── SIDEBAR ── */
+    .sidebar {
+      width: var(--sidebar-w);
+      background: var(--white);
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid var(--border);
+      position: fixed;
+      top: 0; left: 0;
+      height: 100vh;
+      z-index: 100;
+    }
+
+    .sidebar-brand {
+      padding: 24px 20px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .brand-icon {
+      width: 40px; height: 40px;
+      background: linear-gradient(135deg, var(--maroon), var(--maroon-light));
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 10px;
+    }
+    .brand-icon i { color: #fff; font-size: 18px; }
+
+    .brand-name {
+      font-family: 'Playfair Display', serif;
+      font-size: 16px;
+      color: var(--maroon);
+      line-height: 1.2;
+    }
+    .brand-sub {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 2px;
+      text-align: center;
+    }
+
+    .sidebar-nav {
+      flex: 1;
+      padding: 16px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all .2s;
+      cursor: pointer;
+    }
+    .nav-item:hover { background: var(--maroon-bg); color: var(--maroon); }
+    .nav-item.active { background: var(--soft-red); color: var(--maroon); }
+    .nav-item.active i { color: var(--maroon); } 
+    .nav-item i { width: 18px; text-align: center; font-size: 15px; }
+
+    .sidebar-footer {
+      padding: 16px 12px;
+      border-top: 1px solid var(--border);
+    }
+
+    /* ── MAIN CONTENT ── */
+    .main {
+      margin-left: var(--sidebar-w);
+      flex: 1;
+      padding: 28px;
+      overflow-x: hidden;
+    }
+
+    /* ── HELP BUTTON ── */
+    .help-btn {
+      position: fixed;
+      bottom: 24px; right: 24px;
+      width: 38px; height: 38px;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; color: var(--text-muted);
+      cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.08);
+      z-index: 200;
+    }
+  </style>
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+
+  <!-- SIDEBAR -->
+    <aside class="sidebar">
+        <div class="sidebar-brand">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <img src="{% static 'main/images/logo.png' %}" alt="StudyOptimizer" style="width: 50px; height: auto;">
+                <div>
+                    <div class="brand-name" style="font-family: 'DM Sans', sans-serif; font-size: 15px; color: var(--maroon); font-weight: 700; line-height: 1.2;">
+                        StudyOptimizer<br><span style="color: var(--maroon-light);">Admin</span>
+                    </div>
+                    <div class="brand-sub">Manage your platform</div>
+                </div>
+            </div>
+        </div>
+
+    <nav class="sidebar-nav">
+      <a href="{% url 'admin_dashboard' %}" class="nav-item {% if request.resolver_match.url_name == 'admin_dashboard' %}active{% endif %}">
+        <i class="fas fa-gauge-high"></i> Dashboard
+      </a>
+      <a href="{% url 'admin_users' %}" class="nav-item {% if request.resolver_match.url_name == 'admin_users' %}active{% endif %}">
+        <i class="fas fa-user-group"></i> User Management
+      </a>
+      <a href="{% url 'admin_collaboration' %}" class="nav-item {% if request.resolver_match.url_name == 'admin_collaboration' %}active{% endif %}">
+        <i class="fas fa-comment-dots"></i> Collaboration Control
+      </a>
+      <a href="{% url 'admin_ai' %}" class="nav-item {% if request.resolver_match.url_name == 'admin_ai' %}active{% endif %}">
+        <i class="fas fa-robot"></i> AI Controls
+      </a>
+      <a href="{% url 'admin_analytics' %}" class="nav-item {% if request.resolver_match.url_name == 'admin_analytics' %}active{% endif %}">
+        <i class="fas fa-chart-bar"></i> Analytics
+      </a>
+      <a href="{% url 'admin_audit' %}" class="nav-item {% if request.resolver_match.url_name == 'admin_audit' %}active{% endif %}">
+        <i class="fas fa-file-lines"></i> Audit Logs
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <a href="{% url 'logout' %}" class="nav-item">
+        <i class="fas fa-arrow-right-from-bracket"></i> Logout
+      </a>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+    {% block content %}{% endblock %}
+  </main>
+
+  <div class="help-btn" title="Help">?</div>
+
+  {% block extra_scripts %}{% endblock %}
+</body>
+</html>
